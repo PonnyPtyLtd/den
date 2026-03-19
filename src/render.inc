@@ -3,8 +3,33 @@
 ;==============================================================
 
 ;--------------------------------------------------------------
+; MapCharToTile - convert map ASCII char to tile index
+; Input: A = ASCII char from MapBuffer
+; Output: A = tile index
+;--------------------------------------------------------------
+MapCharToTile:
+    cp '#'
+    jr z,_mct_wall
+    cp '.'
+    jr z,_mct_floor
+    cp '>'
+    jr z,_mct_stairs
+    ; fallback: font tile
+    sub $20
+    ret
+_mct_wall:
+    ld a,TILE_WALL
+    ret
+_mct_floor:
+    ld a,TILE_FLOOR
+    ret
+_mct_stairs:
+    ld a,TILE_STAIRS
+    ret
+
+;--------------------------------------------------------------
 ; WriteTileToVRAM - write single tile to name table
-; Input: B=X, C=Y, A=ASCII char, D=attribute
+; Input: B=X, C=Y, A=tile index, D=attribute
 ; Clobbers: HL, BC
 ;--------------------------------------------------------------
 WriteTileToVRAM:
@@ -26,8 +51,7 @@ WriteTileToVRAM:
     add hl,bc              ; + name table base
     ; Prepare data before critical section
     pop de                  ; D = attribute
-    pop af                  ; A = ASCII char
-    sub $20                 ; to tile index
+    pop af                  ; A = tile index
     ld b,a                  ; B = tile index
     ld c,d                  ; C = attribute
     ; Critical section: all port I/O
@@ -79,10 +103,13 @@ RenderFullMap:
     ld de,MAP_SIZE
 _rfm_loop:
     ld a,(hl)
-    push af
-    sub $20
+    push hl
+    push de
+    call MapCharToTile
+    pop de
+    pop hl
     out ($be),a             ; tile index
-    pop af
+    ld a,(hl)
     cp '>'                  ; stairs get bright palette
     jr nz,_rfm_pal0
     ld a,ATTR_PAL1
@@ -205,13 +232,15 @@ EraseEntities:
     ld a,(PlayerY)
     ld c,a
     push bc
-    call GetMapTile
-    pop bc
+    call GetMapTile         ; A = terrain ASCII, clobbers BC
+    pop bc                  ; restore X,Y
+    ; Set palette before converting (MapCharToTile only touches A)
     ld d,ATTR_PAL0
     cp '>'
     jr nz,+
     ld d,ATTR_PAL1
 +:
+    call MapCharToTile      ; A = tile index
     call WriteTileToVRAM
     ; Erase enemies
     ld ix,EnemyData
@@ -224,13 +253,14 @@ _ee_loop:
     ld c,(ix+ENEMY_Y)
     push de
     push bc
-    call GetMapTile
-    pop bc
+    call GetMapTile         ; A = terrain ASCII, clobbers BC
+    pop bc                  ; restore X,Y
     ld d,ATTR_PAL0
     cp '>'
     jr nz,+
     ld d,ATTR_PAL1
 +:
+    call MapCharToTile      ; A = tile index
     call WriteTileToVRAM
     pop de
 _ee_skip:
@@ -258,7 +288,7 @@ DrawPlayer:
     ld b,a
     ld a,(PlayerY)
     ld c,a
-    ld a,'@'
+    ld a,TILE_PLAYER
     ld d,ATTR_PAL1
     call WriteTileToVRAM
     ret
@@ -274,7 +304,7 @@ _dae_loop:
     or a
     jr z,_dae_skip
     push de
-    call GetEnemyChar
+    call GetEnemyTile       ; A = tile index
     ld b,(ix+ENEMY_X)
     ld c,(ix+ENEMY_Y)
     ld d,ATTR_PAL1
@@ -290,23 +320,23 @@ _dae_skip:
     ret
 
 ;--------------------------------------------------------------
-; GetEnemyChar - ASCII char for enemy type
+; GetEnemyTile - tile index for enemy type
 ; Input: (ix+ENEMY_TYPE)
-; Output: A = char
+; Output: A = tile index
 ;--------------------------------------------------------------
-GetEnemyChar:
+GetEnemyTile:
     ld a,(ix+ENEMY_TYPE)
     cp 1
-    jr z,_gec_rat
+    jr z,_get_rat
     cp 2
-    jr z,_gec_snake
-    ld a,'o'
+    jr z,_get_snake
+    ld a,TILE_ORC
     ret
-_gec_rat:
-    ld a,'r'
+_get_rat:
+    ld a,TILE_RAT
     ret
-_gec_snake:
-    ld a,'s'
+_get_snake:
+    ld a,TILE_SNAKE
     ret
 
 ;--------------------------------------------------------------

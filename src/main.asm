@@ -82,6 +82,23 @@ _loadFont:
     or c
     jp nz,_loadFont
 
+    ; Load custom game tiles at tile index 95 (VRAM $0BE0)
+    ; 7 tiles * 32 bytes = 224 bytes, loaded sequentially
+    ld a,$E0
+    out ($bf),a
+    ld a,$0B | $40
+    out ($bf),a
+    ld hl,WallTileData
+    ld bc,CustomTileCount * 32
+_loadGameTiles:
+    ld a,(hl)
+    out ($be),a
+    inc hl
+    dec bc
+    ld a,b
+    or c
+    jp nz,_loadGameTiles
+
     ; Initialize music
     call InitMusic
 
@@ -110,4 +127,5 @@ GameLoop:
 .include "game.inc"
 .include "music.inc"
 .include "data/strings.inc"
+.include "data/tiles.inc"
 .include "data/font.inc"
