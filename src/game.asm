@@ -5,6 +5,7 @@
 defaultslot 0
 slotsize $8000
 slot 0 $0000
+slot 1 $c000  ; RAM slot (SMS RAM is $C000-$DFFF)
 .endme
 
 .rombankmap
@@ -12,6 +13,16 @@ bankstotal 1
 banksize $8000
 banks 1
 .endro
+
+.ramsection "Variables" slot 1
+RandomNumberGeneratorWord dw
+Ch0Ptr dw
+Ch0Timer db
+Ch1Ptr dw
+Ch1Timer db
+Ch2Ptr dw
+Ch2Timer db
+.ends
 
 ;==============================================================
 ; SDSC tag and SMS rom header
@@ -26,6 +37,21 @@ banks 1
     di              ; disable interrupts
     im 1            ; Interrupt mode 1
     jp main         ; jump to main program
+
+.org $0038
+;==============================================================
+; VBlank interrupt handler
+;==============================================================
+    push af
+    push bc
+    push hl
+    in a,($bf)          ; acknowledge VBlank interrupt
+    call UpdateMusic
+    pop hl
+    pop bc
+    pop af
+    ei
+    reti
 
 .org $0066
 ;==============================================================
@@ -107,56 +133,294 @@ main:
     ;==============================================================
     ; Write text to name table
     ;==============================================================
-    ; 1. Set VRAM write address to name table index 0
-    ; by outputting $4000 ORed with $3800+0
-    ld a,$00
+    ; Line 1: "Ponny's SMS roguelike!" at row 0, col 5
+    ld a,$0A             ; low byte of $3800 + 5*2
     out ($bf),a
-    ld a,$38|$40
+    ld a,$38|$40         ; high byte with write flag
     out ($bf),a
-    ; 2. Output tilemap data
-    ld hl,Message
-    ld bc,MessageEnd-Message  ; Counter for number of bytes to write
-    WriteTextLoop:
-        ld a,(hl)    ; Get data byte
+    ld hl,Message1
+    ld bc,Message1End-Message1
+    _writeText1:
+        ld a,(hl)
         out ($be),a
-        inc hl       ; Point to next letter
+        inc hl
         dec bc
         ld a,b
         or c
-        jp nz,WriteTextLoop
+        jp nz,_writeText1
 
-    ; Turn screen on
-    ld a,%11000000
+    ; Line 2: "HAI BRAILLYNN!" at row 4, col 9
+    ld a,$12             ; low byte of $3800 + 4*64 + 9*2
+    out ($bf),a
+    ld a,$39|$40         ; high byte with write flag
+    out ($bf),a
+    ld hl,Message2
+    ld bc,Message2End-Message2
+    _writeText2:
+        ld a,(hl)
+        out ($be),a
+        inc hl
+        dec bc
+        ld a,b
+        or c
+        jp nz,_writeText2
+
+    ; Turn screen on with VBlank interrupts enabled
+    ld a,%11100000
 ;          |||| |`- Zoomed sprites -> 16x16 pixels
 ;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
 ;          |||`---- 30 row/240 line mode
 ;          ||`----- 28 row/224 line mode
-;          |`------ VBlank interrupts
-;          `------- Enable display
+;          |`------ VBlank interrupts (bit 5)
+;          `------- Enable display (bit 6)
     out ($bf),a
     ld a,$81
     out ($bf),a
 
-    ; Infinite loop to stop program
+    ; Initialize music and enable interrupts
+    call InitMusic
+    ei
+
 Loop:
-     jp Loop
+    halt                ; wait for VBlank
+    jp Loop
 
 ;==============================================================
 ; Data
 ;==============================================================
 
-Message:
-.dw $28,$45,$4c,$4c,$4f,$00,$37,$4f,$52,$4c,$44,$01
-MessageEnd:
+; Tile index = ASCII - $20
+; "Ponny's SMS roguelike!"
+Message1:
+.dw $30,$4F,$4E,$4E,$59,$07,$53,$00,$33,$2D,$33,$00,$52,$4F,$47,$55,$45,$4C,$49,$4B,$45,$01
+Message1End:
+
+; "HAI BRAILLYNN!"
+Message2:
+.dw $28,$21,$29,$00,$22,$32,$21,$29,$2C,$2C,$39,$2E,$2E,$01
+Message2End:
 
 PaletteData:
-.db $00,$3f
+.db $00,$8f
 PaletteDataEnd:
 
 ; VDP initialisation data
 VdpData:
 .db $04,$80,$00,$81,$ff,$82,$ff,$85,$ff,$86,$ff,$87,$00,$88,$00,$89,$ff,$8a
 VdpDataEnd:
+
+GetRandomNumber:
+; Uses a 16-bit RAM variable called RandomNumberGeneratorWord
+; Returns an 8-bit pseudo-random number in a
+    push hl
+        ld hl,(RandomNumberGeneratorWord)
+        ld a,h         ; get high byte
+        rrca           ; rotate right by 2
+        rrca
+        xor h          ; xor with original
+        rrca           ; rotate right by 1
+        xor l          ; xor with low byte
+        rrca           ; rotate right by 4
+        rrca
+        rrca
+        rrca
+        xor l          ; xor again
+        rra            ; rotate right by 1 through carry
+        adc hl,hl      ; add RandomNumberGeneratorWord to itself
+        jr nz,+
+        ld hl,$733c    ; if last xor resulted in zero then re-seed random number generator
++:      ld a,r         ; r = refresh register = semi-random number
+        xor l          ; xor with l which is fairly random
+        ld (RandomNumberGeneratorWord),hl
+    pop hl
+    ret                ; return random number in a
+
+;==============================================================
+; Music engine
+;==============================================================
+; Data format: 4 bytes per note (psg_tone_latch, psg_tone_data, psg_volume, duration)
+; $FF = loop back to start
+;
+; SMS PSG (SN76489) tone values = 3579545 / (32 * freq_hz)
+; Volume: $9x for ch0, $Bx for ch1 (x=0 loudest, x=F mute)
+
+InitMusic:
+    ld hl,MelodyData
+    ld (Ch0Ptr),hl
+    ld hl,BassData
+    ld (Ch1Ptr),hl
+    ld hl,HarmonyData
+    ld (Ch2Ptr),hl
+    ld a,1
+    ld (Ch0Timer),a
+    ld (Ch1Timer),a
+    ld (Ch2Timer),a
+    ret
+
+UpdateMusic:
+    ; --- Channel 0 (melody) ---
+    ld a,(Ch0Timer)
+    dec a
+    ld (Ch0Timer),a
+    or a
+    jr nz,_ch1
+
+    ld hl,(Ch0Ptr)
+_ch0Read:
+    ld a,(hl)
+    cp $FF
+    jr nz,+
+    ld hl,MelodyData
+    jr _ch0Read
++:
+    out ($7F),a         ; tone latch (channel + low 4 bits)
+    inc hl
+    ld a,(hl)
+    out ($7F),a         ; tone data (high 6 bits)
+    inc hl
+    ld a,(hl)
+    out ($7F),a         ; volume
+    inc hl
+    ld a,(hl)
+    ld (Ch0Timer),a     ; duration in frames
+    inc hl
+    ld (Ch0Ptr),hl
+
+_ch1:
+    ; --- Channel 1 (bass) ---
+    ld a,(Ch1Timer)
+    dec a
+    ld (Ch1Timer),a
+    or a
+    jr nz,_ch2
+
+    ld hl,(Ch1Ptr)
+_ch1Read:
+    ld a,(hl)
+    cp $FF
+    jr nz,+
+    ld hl,BassData
+    jr _ch1Read
++:
+    out ($7F),a         ; tone latch
+    inc hl
+    ld a,(hl)
+    out ($7F),a         ; tone data
+    inc hl
+    ld a,(hl)
+    out ($7F),a         ; volume
+    inc hl
+    ld a,(hl)
+    ld (Ch1Timer),a     ; duration
+    inc hl
+    ld (Ch1Ptr),hl
+
+_ch2:
+    ; --- Channel 2 (harmony) ---
+    ld a,(Ch2Timer)
+    dec a
+    ld (Ch2Timer),a
+    or a
+    ret nz
+
+    ld hl,(Ch2Ptr)
+_ch2Read:
+    ld a,(hl)
+    cp $FF
+    jr nz,+
+    ld hl,HarmonyData
+    jr _ch2Read
++:
+    out ($7F),a         ; tone latch
+    inc hl
+    ld a,(hl)
+    out ($7F),a         ; tone data
+    inc hl
+    ld a,(hl)
+    out ($7F),a         ; volume
+    inc hl
+    ld a,(hl)
+    ld (Ch2Timer),a     ; duration
+    inc hl
+    ld (Ch2Ptr),hl
+
+    ret
+
+;==============================================================
+; Puzzle roguelike music (D Dorian)
+;==============================================================
+; D Dorian = D E F G A B C - brighter than natural minor
+; Tone values: D4=381 E4=339 F4=320 G4=286 A4=254
+;              C4=428 B3=453 A3=509 G3=571 F3=641 E3=679 D3=762
+
+; Melody - channel 0
+; 8 phrases, each 100 frames = ~13 seconds total
+MelodyData:
+    ; Phrase 1 - curious, ascending
+    .db $8D,$17,$92,25   ; D4
+    .db $83,$15,$92,25   ; E4
+    .db $80,$14,$92,40   ; F4 (linger)
+    .db $80,$00,$9F,10   ; rest
+    ; Phrase 2 - settling back
+    .db $83,$15,$92,20   ; E4
+    .db $8D,$17,$92,20   ; D4
+    .db $83,$15,$92,50   ; E4 (long, thoughtful)
+    .db $80,$00,$9F,10   ; rest
+    ; Phrase 3 - reaching higher
+    .db $80,$14,$92,25   ; F4
+    .db $8E,$11,$92,25   ; G4
+    .db $8E,$0F,$92,40   ; A4 (peak)
+    .db $80,$00,$9F,10   ; rest
+    ; Phrase 4 - graceful descent
+    .db $8E,$11,$92,20   ; G4
+    .db $80,$14,$92,20   ; F4
+    .db $83,$15,$92,50   ; E4 (long, resolving)
+    .db $80,$00,$9F,10   ; rest
+    ; Phrase 5 - playful
+    .db $8D,$17,$92,25   ; D4
+    .db $80,$14,$92,25   ; F4
+    .db $83,$15,$92,25   ; E4
+    .db $8D,$17,$92,15   ; D4 (quick)
+    .db $80,$00,$9F,10   ; rest
+    ; Phrase 6 - contemplative
+    .db $8C,$1A,$92,25   ; C4
+    .db $8D,$17,$92,25   ; D4
+    .db $83,$15,$92,40   ; E4 (linger)
+    .db $80,$00,$9F,10   ; rest
+    ; Phrase 7 - ascending discovery (B natural = Dorian color)
+    .db $8D,$1F,$92,20   ; A3
+    .db $85,$1C,$92,20   ; B3
+    .db $8C,$1A,$92,20   ; C4
+    .db $8D,$17,$92,30   ; D4
+    .db $80,$00,$9F,10   ; rest
+    ; Phrase 8 - gentle resolution
+    .db $83,$15,$92,20   ; E4
+    .db $8D,$17,$92,20   ; D4
+    .db $8C,$1A,$92,20   ; C4
+    .db $8D,$17,$92,30   ; D4 (home)
+    .db $80,$00,$9F,10   ; rest
+    .db $FF               ; loop
+
+; Bass - channel 1
+; Walking pattern, legato (200 frames, loops 4x over melody)
+; D3=762, A3=509, G3=571
+BassData:
+    .db $AA,$2F,$B3,50   ; D3 - root
+    .db $AD,$1F,$B3,50   ; A3 - fifth
+    .db $AB,$23,$B3,50   ; G3 - fourth
+    .db $AD,$1F,$B3,50   ; A3 - fifth
+    .db $FF               ; loop
+
+; Harmony - channel 2
+; Slow-shifting pad, slightly out of phase with melody (720 frames)
+; for subtle variety on each repeat
+; F3=641, G3=571, A3=509
+HarmonyData:
+    .db $C1,$28,$D6,180  ; F3 pad (warm minor 3rd)
+    .db $CB,$23,$D6,180  ; G3 pad (bright 4th)
+    .db $CD,$1F,$D6,180  ; A3 pad (open 5th)
+    .db $CB,$23,$D6,180  ; G3 pad
+    .db $FF               ; loop
 
 FontData:
 .db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
