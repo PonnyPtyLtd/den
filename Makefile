@@ -10,8 +10,8 @@ BUILD_DIR := build
 ASSETS_DIR := assets
 
 # Files
-MAIN_ASM := $(SRC_DIR)/game.asm
-OBJECTS := $(BUILD_DIR)/game.o
+MAIN_ASM := $(SRC_DIR)/main.asm
+OBJECTS := $(BUILD_DIR)/main.o
 OUTPUT_ROM := $(BUILD_DIR)/game.sms
 LINK_FILE := $(BUILD_DIR)/linkfile
 
@@ -29,9 +29,9 @@ $(OUTPUT_ROM): $(OBJECTS)
 	$(WLALINK) -d -r -v -S $(LINK_FILE) $(OUTPUT_ROM)
 
 # Assemble source to object file
-$(BUILD_DIR)/game.o: $(MAIN_ASM)
+$(BUILD_DIR)/main.o: $(MAIN_ASM) $(wildcard $(SRC_DIR)/*.inc $(SRC_DIR)/data/*.inc)
 	@echo "Assembling $<..."
-	$(WLA) -o $@ $<
+	$(WLA) -I $(SRC_DIR) -o $@ $<
 
 # Remove all build artifacts
 clean:
