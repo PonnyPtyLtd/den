@@ -761,7 +761,12 @@ DrawInvCursor:
     ld c,(hl)
     inc c
     push bc
-    ; Highlight the selected action
+    ; Only show Equip for non-consumables
+    push bc
+    call _itsm_minOpt
+    pop bc
+    cp 2
+    jr z,_dic_drop          ; consumable = skip Equip line entirely
     ld a,(InvSubMenu)
     cp 1
     jr nz,+
@@ -813,6 +818,20 @@ _dic_use:
 _dimEquip: .db "  Equip",0
 _dimDrop:  .db "  Drop",0
 _dimUse:   .db "  Use",0
+
+; Returns min sub-menu option: 2 (Drop) for consumables, 1 (Equip) for equipment
+_itsm_minOpt:
+    call GetSlotPtr
+    ld a,(hl)
+    cp ITEM_POTION
+    jr z,_imino_2
+    cp ITEM_WAND
+    jr z,_imino_2
+    ld a,1                  ; Equip available
+    ret
+_imino_2:
+    ld a,2                  ; Drop is first option (no Equip)
+    ret
 
 ; Returns max sub-menu option for current slot: 3 if consumable, 2 otherwise
 _itsm_maxOpt:
@@ -904,8 +923,8 @@ _it_noDown:
     ld a,(hl)
     or a
     ret z                   ; empty slot, nothing to do
-    ld a,1
-    ld (InvSubMenu),a       ; show equip option
+    call _itsm_minOpt       ; start at first valid option
+    ld (InvSubMenu),a
     call DrawInventory
     ret
 _it_noB1:
@@ -922,24 +941,27 @@ _it_subMenu:
     ld a,(InputNew)
     bit 0,a                 ; UP = previous option
     jr z,+
+    call _itsm_minOpt
+    ld b,a                  ; B = min
     ld a,(InvSubMenu)
     dec a
-    jr nz,_itsm_setOpt
-    call _itsm_maxOpt       ; A = max (2 or 3)
+    cp b
+    jr nc,_itsm_setOpt
+    call _itsm_maxOpt       ; wrap to max
     jr _itsm_setOpt
 +:
     ld a,(InputNew)
     bit 1,a                 ; DOWN = next option
     jr z,+
-    call _itsm_maxOpt       ; B = max
-    ld b,a
+    call _itsm_maxOpt
+    ld b,a                  ; B = max
     ld a,(InvSubMenu)
     cp b
-    jr nc,_itsm_wrap        ; at max, wrap to 1
+    jr nc,_itsm_wrap
     inc a
     jr _itsm_setOpt
 _itsm_wrap:
-    ld a,1
+    call _itsm_minOpt       ; wrap to min
 _itsm_setOpt:
     ld (InvSubMenu),a
     call PlayMenuSfx
