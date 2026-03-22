@@ -46,8 +46,8 @@ _grr_mod:
 
 ;--------------------------------------------------------------
 ; GetMapAddress - calculate MapBuffer address
-; Input: B=X (0-31), C=Y (0-21)
-; Output: HL = MapBuffer + Y*32 + X
+; Input: B=X (0-15), C=Y (0-10)
+; Output: HL = MapBuffer + Y*16 + X
 ; Clobbers: BC
 ;--------------------------------------------------------------
 GetMapAddress:

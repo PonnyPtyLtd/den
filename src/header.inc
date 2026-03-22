@@ -18,7 +18,6 @@
 
 ; Animation
 .define ANIM_FRAMES 4
-.define ANIM_PX_STEP 4
 .define TURN_IDLE 0
 .define TURN_PLAYER_ANIM 1
 .define TURN_ENEMY_ANIM 2
@@ -120,11 +119,9 @@ InvPocket2 db
 MenuState db        ; 0=none, 1=radial, 2=inventory
 MenuCursor db
 InvSubMenu db       ; 0=none, 1=equip highlighted, 2=drop highlighted
-AttackPhase db
 AttackDirX db
 AttackDirY db
 PlayerRace db           ; 0=frog, 1=dingo, 2=manul, 3=chicken
-LastMoveDir db
 LevelDropCount db       ; items dropped this level (for guaranteed drop)
 ; Enemy animation pixel tracking
 EnemyPixelX dsb 8
@@ -151,6 +148,7 @@ PathQueue dsb 176       ; BFS queue (stores tile indices)
 BfsHead db
 BfsTail db
 WandAiming db           ; nonzero = waiting for direction to fire wand
+EnemyProcMask db        ; bitmask for enemy processing order
 .ends
 
 ; Turn phases (extended)

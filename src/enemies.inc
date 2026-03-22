@@ -154,7 +154,7 @@ UpdateEnemies:
     ; closest to the player (lowest distance in DistMap)
     ; Use a bitmask to track which have been processed
     ld a,$FF
-    ld (BorderX),a          ; reuse as "remaining" bitmask (all 8 bits set)
+    ld (EnemyProcMask),a          ; reuse as "remaining" bitmask (all 8 bits set)
     ld b,MAX_ENEMIES
 _ue_outerLoop:
     push bc
@@ -168,7 +168,7 @@ _ue_findBest:
     cp MAX_ENEMIES
     jr z,_ue_foundBest
     ; Check if already processed (bit clear in mask)
-    ld a,(BorderX)
+    ld a,(EnemyProcMask)
     ld d,a
     ld a,e
     call _ue_checkBit       ; Z = bit is clear (already done)
@@ -203,11 +203,11 @@ _ue_foundBest:
     jr z,_ue_allDone        ; no more unprocessed enemies
 
     ; Mark this enemy as processed (clear bit in mask)
-    ld a,(BorderX)
+    ld a,(EnemyProcMask)
     ld d,a
     ld a,b
     call _ue_clearBit
-    ld (BorderX),a
+    ld (EnemyProcMask),a
 
     ; Get IX pointing to this enemy
     ld ix,EnemyData

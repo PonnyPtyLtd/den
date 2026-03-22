@@ -247,6 +247,7 @@ _rmt_doPickup:
 _rmt_doWait:
     call CloseMenu
     call SaveEnemyOldPositions
+    call BuildDistMap
     call UpdateEnemies
     call StartEnemyAnimation
     ret
@@ -1380,53 +1381,3 @@ _us_wand:
     scf                     ; signal: used (closes inventory)
     ret
 
-;--------------------------------------------------------------
-; FindNearestEnemy - find closest alive enemy to player
-; Output: IX = enemy data ptr, carry set if none found
-;--------------------------------------------------------------
-FindNearestEnemy:
-    ld ix,EnemyData
-    ld b,MAX_ENEMIES
-    ld c,$FF                ; best distance so far
-    ld de,0                 ; best IX will be saved
-_fne_loop:
-    push bc
-    ld a,(ix+ENEMY_TYPE)
-    or a
-    jr z,_fne_skip
-    ; Calculate Manhattan distance
-    ld a,(PlayerX)
-    sub (ix+ENEMY_X)
-    jr nc,+
-    neg
-+:
-    ld b,a                  ; |dx|
-    ld a,(PlayerY)
-    sub (ix+ENEMY_Y)
-    jr nc,+
-    neg
-+:
-    add a,b                 ; distance = |dx| + |dy|
-    cp c
-    jr nc,_fne_skip         ; not closer
-    ld c,a                  ; new best distance
-    push ix
-    pop de                  ; DE = best enemy ptr
-_fne_skip:
-    push de
-    ld de,ENEMY_SIZE
-    add ix,de
-    pop de
-    pop bc
-    djnz _fne_loop
-    ; DE = best enemy, C = distance ($FF if none found)
-    ld a,c
-    cp $FF
-    jr z,_fne_none
-    push de
-    pop ix                  ; IX = nearest enemy
-    or a                    ; clear carry = found
-    ret
-_fne_none:
-    scf                     ; carry = not found
-    ret

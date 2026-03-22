@@ -69,7 +69,6 @@ StartNewGame:
     ld (InvPocket1),a
     ld (InvPocket2),a
     ld (InvSubMenu),a
-    ld (AttackPhase),a
     ld (WandAiming),a
     ld a,15
     ld (AnimTimer),a
@@ -423,7 +422,7 @@ _seop_loop2:
     inc hl                 ; offset 2 = HP
     inc hl                 ; offset 3 = TYPE
     inc hl                 ; offset 4 = ATK
-    inc hl                 ; offset 5 = next enemy X  *** THIS WAS MISSING ***
+    inc hl                 ; advance to next enemy X
     inc ix
     inc iy
     djnz _seop_loop2
@@ -868,9 +867,6 @@ StartDraft:
     ld (DraftRound),a
     ld (DraftCursor),a
     call LoadRoundPool      ; load/generate pool for round 0
-    ; Dev tool: inject item into first draft slot (comment out to disable)
-    ld a,ITEM_WAND
-    ld (DraftPool),a
     call ShowDraftScreen
     ld a,5
     ld (GameState),a

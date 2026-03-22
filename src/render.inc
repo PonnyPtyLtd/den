@@ -1043,6 +1043,3 @@ _drb_writeTile:
     ei
     ret
 
-; Temporary storage for BuildSpriteTable
-BuildSprIXSave: .dw 0
-BuildSprIYSave: .dw 0

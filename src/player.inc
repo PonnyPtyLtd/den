@@ -405,4 +405,3 @@ _itcTable: .db 'w','x','y','s','S','T','a','A','B','h','p','f'
 ;--------------------------------------------------------------
 WeaponBonusTable: .db 1, 3, 5    ; weapon types 1-3: ATK bonus
 ShieldDefTable:   .db 1, 2, 4    ; shield types 4-6: DEF bonus
-ArmorHPTable:     .db 2, 5, 10   ; armor types 7-9: MaxHP bonus
