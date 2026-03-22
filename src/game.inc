@@ -70,6 +70,7 @@ StartNewGame:
     ld (InvPocket2),a
     ld (InvSubMenu),a
     ld (AttackPhase),a
+    ld (WandAiming),a
     ld a,15
     ld (AnimTimer),a
     call GenerateLevel
@@ -138,6 +139,31 @@ _pt_noMenu:
     ret
 
 _pt_idle:
+    ; Check wand aiming mode
+    ld a,(WandAiming)
+    or a
+    jr z,_pt_noWand
+    ; Waiting for direction to fire wand
+    ld a,(InputNew)
+    and $0F
+    ret z                   ; no direction yet
+    ; Close the aim menu, restore map
+    push af
+    call _closeAimMenu
+    pop af
+    ; Fire wand with visible projectile
+    call FireWand           ; A = direction bits
+    ; Rebuild sprites (enemy may have died)
+    call BuildSpriteTable
+    xor a
+    ld (WandAiming),a
+    ; Costs a turn
+    call SaveEnemyOldPositions
+    call BuildDistMap
+    call UpdateEnemies
+    call StartEnemyAnimation
+    ret
+_pt_noWand:
     ; Check Button 2 for radial menu
     ld a,(InputNew)
     bit 5,a
@@ -842,6 +868,9 @@ StartDraft:
     ld (DraftRound),a
     ld (DraftCursor),a
     call LoadRoundPool      ; load/generate pool for round 0
+    ; Dev tool: inject item into first draft slot (comment out to disable)
+    ld a,ITEM_WAND
+    ld (DraftPool),a
     call ShowDraftScreen
     ld a,5
     ld (GameState),a
@@ -1113,6 +1142,154 @@ _dt_done:
     call RenderHUD
     call BuildSpriteTable
     call DisplayOn
+    ret
+
+_closeAimMenu:
+    xor a
+    ld (BorderPriority),a
+    call DisplayOff
+    call ClearNameTable
+    call RenderFullMap
+    call RenderHUD
+    call DisplayOn
+    ret
+
+;--------------------------------------------------------------
+; FireWand - fire a ball of fire in a direction
+; Input: A = direction bits from InputNew (bit0=up,1=down,2=left,3=right)
+; Scans tiles from player position, hits first enemy for 10 damage
+;--------------------------------------------------------------
+FireWand:
+    ; Convert direction bits to dx,dy
+    bit 0,a
+    jr nz,_fw_up
+    bit 1,a
+    jr nz,_fw_down
+    bit 2,a
+    jr nz,_fw_left
+    ; Right
+    ld b,1
+    ld c,0
+    jr _fw_scan
+_fw_up:
+    ld b,0
+    ld c,-1
+    jr _fw_scan
+_fw_down:
+    ld b,0
+    ld c,1
+    jr _fw_scan
+_fw_left:
+    ld b,-1
+    ld c,0
+_fw_scan:
+    ; B=dx, C=dy. Start from player position.
+    ld a,(PlayerX)
+    ld d,a
+    ld a,(PlayerY)
+    ld e,a
+    call PlayWandSfx
+_fw_loop:
+    ; Advance position
+    ld a,d
+    add a,b
+    ld d,a
+    ld a,e
+    add a,c
+    ld e,a
+    ; Bounds check
+    ld a,d
+    cp MAP_WIDTH
+    ret nc
+    ld a,e
+    cp MAP_HEIGHT
+    ret nc
+    ; Wall check
+    push bc
+    push de
+    ld b,d
+    ld c,e
+    call GetMapTile
+    pop de
+    pop bc
+    cp '#'
+    ret z                   ; fizzle on wall
+
+    ; Show fireball sprite at this position and wait
+    push bc
+    push de
+    call BuildSpriteTable
+    pop de                  ; restore tile X,Y BEFORE computing pixels
+    push de
+    ; Compute pixel position from tile coords
+    ld a,d
+    add a,a
+    add a,a
+    add a,a
+    add a,a
+    ld d,a                  ; pixel X
+    ld a,e
+    add a,a
+    add a,a
+    add a,a
+    add a,a
+    ld e,a                  ; pixel Y
+    ld c,SPR_FIREBALL
+    call AddSprite16Simple
+    ; Wait 4 frames for the fireball to be visible
+    halt
+    halt
+    halt
+    halt
+    pop de
+    pop bc
+
+    ; Enemy check
+    push bc
+    push de
+    ld b,d
+    ld c,e
+    call FindEnemyAt
+    pop de
+    pop bc
+    cp $FF
+    jr z,_fw_loop           ; no enemy, keep going
+
+    ; Hit an enemy! A = enemy index
+    push de
+    ; Get enemy data pointer
+    ld hl,EnemyData
+    ld de,ENEMY_SIZE
+    or a
+    jr z,_fw_gotEnemy
+    ld b,a
+_fw_seekEnemy:
+    add hl,de
+    djnz _fw_seekEnemy
+_fw_gotEnemy:
+    pop de
+    ; HL -> enemy X
+    ld d,(hl)
+    inc hl
+    ld e,(hl)               ; enemy Y
+    inc hl                  ; HL -> HP
+    ld a,(hl)
+    sub 10
+    jr c,_fw_kill
+    jr z,_fw_kill
+    ld (hl),a
+    ret
+_fw_kill:
+    xor a
+    ld (hl),a               ; HP = 0
+    inc hl
+    ld c,(hl)               ; type
+    ld (hl),a               ; type = 0
+    push de
+    ld a,c
+    call PlayDeathSfx
+    pop de
+    call TryDropItem
     ret
 
 DeadTick:

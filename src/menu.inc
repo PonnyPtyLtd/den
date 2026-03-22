@@ -604,6 +604,47 @@ _ldfs_nodata:
     or a
     ret
 
+;--------------------------------------------------------------
+; DrawAimMenu - small directional overlay for wand aiming
+;--------------------------------------------------------------
+DrawAimMenu:
+    ld a,1
+    ld (BorderPriority),a
+    ld b,12
+    ld c,7
+    ld d,8
+    ld e,8
+    call DrawRootBorder
+    ; Direction arrows
+    ld b,15
+    ld c,8
+    ld hl,_aimUp
+    call PrintString
+    ld b,13
+    ld c,10
+    ld hl,_aimLeft
+    call PrintString
+    ld b,17
+    ld c,10
+    ld hl,_aimRight
+    call PrintString
+    ld b,15
+    ld c,12
+    ld hl,_aimDown
+    call PrintString
+    ; Label
+    ld b,11
+    ld c,14
+    ld hl,_aimLabel
+    call PrintString
+    ret
+
+_aimUp:    .db "^",0
+_aimDown:  .db "v",0
+_aimLeft:  .db "<",0
+_aimRight: .db ">",0
+_aimLabel: .db "Fire wand!",0
+
 ; Item type -> sprite base lookup
 ItemSprBaseTable:
 .db 0              ; 0 = empty
@@ -750,6 +791,12 @@ _dic_drop:
 _dic_use:
     pop bc
     inc c
+    ; Only show Use for consumables
+    push bc
+    call _itsm_maxOpt
+    pop bc
+    cp 3
+    ret nz                  ; not consumable, don't show Use at all
     ld a,(InvSubMenu)
     cp 3
     jr nz,+
@@ -766,6 +813,20 @@ _dic_use:
 _dimEquip: .db "  Equip",0
 _dimDrop:  .db "  Drop",0
 _dimUse:   .db "  Use",0
+
+; Returns max sub-menu option for current slot: 3 if consumable, 2 otherwise
+_itsm_maxOpt:
+    call GetSlotPtr
+    ld a,(hl)
+    cp ITEM_POTION
+    jr z,_imo_3
+    cp ITEM_WAND
+    jr z,_imo_3
+    ld a,2                  ; Equip + Drop only
+    ret
+_imo_3:
+    ld a,3                  ; Equip + Drop + Use
+    ret
 
 _invCursorRows: .db 1, 3, 5, 7, 9, 11
 
@@ -859,27 +920,27 @@ _it_noB1:
 _it_subMenu:
     ; Sub-menu: UP=equip, DOWN=drop, LEFT=use, B1=confirm, B2=cancel
     ld a,(InputNew)
-    bit 0,a                 ; UP = equip
+    bit 0,a                 ; UP = previous option
     jr z,+
+    ld a,(InvSubMenu)
+    dec a
+    jr nz,_itsm_setOpt
+    call _itsm_maxOpt       ; A = max (2 or 3)
+    jr _itsm_setOpt
++:
+    ld a,(InputNew)
+    bit 1,a                 ; DOWN = next option
+    jr z,+
+    call _itsm_maxOpt       ; B = max
+    ld b,a
+    ld a,(InvSubMenu)
+    cp b
+    jr nc,_itsm_wrap        ; at max, wrap to 1
+    inc a
+    jr _itsm_setOpt
+_itsm_wrap:
     ld a,1
-    ld (InvSubMenu),a
-    call PlayMenuSfx
-    call DrawInventory
-    ret
-+:
-    ld a,(InputNew)
-    bit 1,a                 ; DOWN = drop
-    jr z,+
-    ld a,2
-    ld (InvSubMenu),a
-    call PlayMenuSfx
-    call DrawInventory
-    ret
-+:
-    ld a,(InputNew)
-    bit 2,a                 ; LEFT = use (consumables)
-    jr z,+
-    ld a,3
+_itsm_setOpt:
     ld (InvSubMenu),a
     call PlayMenuSfx
     call DrawInventory
@@ -890,12 +951,21 @@ _it_subMenu:
     jr z,+
     ld a,(InvSubMenu)
     cp 1
-    jr z,_it_doEquip
+    jr z,_it_tryEquip
     cp 2
     jr z,_it_doDrop
     cp 3
     jr z,_it_doUse
     ret
+_it_tryEquip:
+    ; Can't equip consumables
+    call GetSlotPtr
+    ld a,(hl)
+    cp ITEM_POTION
+    ret z
+    cp ITEM_WAND
+    ret z
+    jr _it_doEquip
 +:
     ld a,(InputNew)
     bit 5,a                 ; B2 = cancel
@@ -921,13 +991,24 @@ _it_doDrop:
 
 _it_doUse:
     call UseSelected
+    jr nc,_it_useStay       ; check carry BEFORE clearing InvSubMenu
     xor a
     ld (InvSubMenu),a
-    ; If item was used, close inventory and return to gameplay
-    or a                    ; UseSelected sets carry if used
-    jr nc,_it_useStay
     call CloseMenu
     call BuildSpriteTable
+    ; Check if wand aiming (wand handles its own turn later)
+    ld a,(WandAiming)
+    or a
+    jr z,_it_useNotWand
+    ; Show directional aim menu
+    call DrawAimMenu
+    ret
+_it_useNotWand:
+    ; Using an item costs a turn - trigger enemy phase
+    call SaveEnemyOldPositions
+    call BuildDistMap
+    call UpdateEnemies
+    call StartEnemyAnimation
     ret
 _it_useStay:
     call DrawInventory
@@ -1022,31 +1103,75 @@ DropSelected:
     ret z                   ; empty slot
     push hl                 ; save slot ptr
     push af                 ; save item type
-    ; Check floor at player pos
+    ; Try player tile, then adjacent tiles
     ld a,(PlayerX)
-    ld b,a
+    ld d,a
     ld a,(PlayerY)
-    ld c,a
-    push bc                 ; save player pos
-    call GetMapTile         ; clobbers BC
-    pop bc                  ; restore player pos
-    cp '.'
-    jr nz,_ds_noRoom
-    ; Place item on map
+    ld e,a
+    ; Try center
+    ld b,d
+    ld c,e
+    call _ds_tryTile
+    jr z,_ds_placed
+    ; Try right
+    ld b,d
+    inc b
+    ld c,e
+    call _ds_tryTile
+    jr z,_ds_placed
+    ; Try left
+    ld b,d
+    dec b
+    ld c,e
+    call _ds_tryTile
+    jr z,_ds_placed
+    ; Try down
+    ld b,d
+    ld c,e
+    inc c
+    call _ds_tryTile
+    jr z,_ds_placed
+    ; Try up
+    ld b,d
+    ld c,e
+    dec c
+    call _ds_tryTile
+    jr z,_ds_placed
+    ; No room anywhere
+    pop af
+    pop hl
+    ret
+_ds_placed:
+    ; B,C = valid drop position
     pop af                  ; A = item type
-    push bc                 ; save X,Y
-    call ItemTypeToChar     ; A = ASCII char
-    pop bc                  ; B=X, C=Y
+    push bc
+    call ItemTypeToChar
+    pop bc
     call SetMapTile
     pop hl                  ; HL = slot ptr
     xor a
-    ld (hl),a               ; clear slot
+    ld (hl),a
     call RecalcStats
     call PlayMenuSfx
     ret
-_ds_noRoom:
-    pop af                  ; clean stack
-    pop hl
+
+; Check if tile at B,C is floor. Returns Z if yes.
+_ds_tryTile:
+    ld a,b
+    cp MAP_WIDTH
+    jr nc,_ds_tryFail
+    ld a,c
+    cp MAP_HEIGHT
+    jr nc,_ds_tryFail
+    push bc
+    push de
+    call GetMapTile
+    pop de
+    pop bc
+    cp '.'
+    ret                     ; Z if floor
+_ds_tryFail:
+    or 1                    ; clear Z
     ret
 
 ;--------------------------------------------------------------
@@ -1225,45 +1350,12 @@ _us_potion:
     ret
 
 _us_wand:
-    ; Zap nearest alive enemy for 10 damage
-    push hl                 ; save slot ptr
-    call FindNearestEnemy   ; returns IX = enemy or carry if none
-    jr c,_us_wand_miss
-    ; Deal 10 damage
-    ld a,(ix+ENEMY_HP)
-    sub 10
-    jr c,_us_wand_kill
-    jr z,_us_wand_kill
-    ld (ix+ENEMY_HP),a
-    call PlayWandSfx
-    pop hl
-    xor a
-    ld (hl),a               ; consume
-    scf
-    ret
-_us_wand_kill:
-    ; Save position for potential drop
-    ld d,(ix+ENEMY_X)
-    ld e,(ix+ENEMY_Y)
-    ld a,(ix+ENEMY_TYPE)
-    push af                 ; save type for death scream
-    xor a
-    ld (ix+ENEMY_HP),a
-    ld (ix+ENEMY_TYPE),a
-    pop af
-    push de
-    call PlayDeathSfx
-    pop de
-    call TryDropItem
-    pop hl
+    ; Enter aiming mode - consume wand, close inventory, wait for direction
     xor a
     ld (hl),a               ; consume wand
-    scf
-    ret
-_us_wand_miss:
-    ; No enemy found
-    pop hl
-    or a                    ; clear carry = not used
+    ld a,1
+    ld (WandAiming),a       ; flag: next direction input fires the wand
+    scf                     ; signal: used (closes inventory)
     ret
 
 ;--------------------------------------------------------------

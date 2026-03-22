@@ -45,6 +45,7 @@
 .define SPR_ARMOR1   68
 .define SPR_ARMOR2   72
 .define SPR_ARMOR3   76
+.define SPR_FIREBALL 104
 
 .define MAX_SPRITES 34
 
@@ -149,6 +150,7 @@ DistMap dsb 176         ; flood-fill distance from player (176 = 16x11)
 PathQueue dsb 176       ; BFS queue (stores tile indices)
 BfsHead db
 BfsTail db
+WandAiming db           ; nonzero = waiting for direction to fire wand
 .ends
 
 ; Turn phases (extended)
