@@ -447,7 +447,7 @@ AutoEquipItem:
     jr c,_aei_shield        ; 4-6 = shield -> right hand
     cp 10
     jr c,_aei_armor         ; 7-9 = armor -> body
-    cp 11
+    cp ITEM_HELMET
     jr z,_aei_helmet        ; 10 = helmet -> head
     ret                     ; consumables don't auto-equip
 
@@ -1293,7 +1293,7 @@ _rs_shield:
     add hl,bc
     ld a,(hl)
     ld (PlayerDef),a
-    jr _rs_armor
+    jr _rs_helmet           ; fall through to helmet check, not skip it
 _rs_noDef:
     xor a
     ld (PlayerDef),a
