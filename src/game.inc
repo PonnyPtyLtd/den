@@ -182,6 +182,7 @@ _pt_checkMove:
 
     ; Player didn't move (bumped wall) - skip to enemy phase
     call SaveEnemyOldPositions
+    call BuildDistMap
     call UpdateEnemies
     call StartEnemyAnimation
     ret
@@ -286,6 +287,7 @@ _pt_atkBack:
     call UpdatePlayerSprite
     ; Start enemy phase
     call SaveEnemyOldPositions
+    call BuildDistMap
     call UpdateEnemies
     call StartEnemyAnimation
     ret
@@ -349,6 +351,7 @@ _pt_noStairs:
     ; No auto-pickup - player uses radial menu to pick up items
     ; Start enemy phase
     call SaveEnemyOldPositions
+    call BuildDistMap
     call UpdateEnemies
     call StartEnemyAnimation
     ret

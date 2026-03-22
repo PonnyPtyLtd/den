@@ -144,6 +144,11 @@ BorderY db
 BorderW db
 BorderH db
 BorderPriority db       ; nonzero = use priority bit (menu over sprites)
+; Pathfinding
+DistMap dsb 176         ; flood-fill distance from player (176 = 16x11)
+PathQueue dsb 176       ; BFS queue (stores tile indices)
+BfsHead db
+BfsTail db
 .ends
 
 ; Turn phases (extended)
