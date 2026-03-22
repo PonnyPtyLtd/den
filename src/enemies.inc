@@ -51,10 +51,21 @@ _se_find:
     ; Not on player?
     ld a,(PlayerX)
     cp d
-    jr nz,_se_place
+    jr nz,_se_notPlayer
     ld a,(PlayerY)
     cp e
     jr z,_se_find
+_se_notPlayer:
+    ; Not on another enemy?
+    push bc
+    push de                 ; save position (FindEnemyAt clobbers E)
+    ld b,d
+    ld c,e
+    call FindEnemyAt
+    pop de                  ; restore position
+    pop bc
+    cp $FF
+    jr nz,_se_find          ; spot taken by another enemy
 _se_place:
     ld (ix+ENEMY_X),d
     ld (ix+ENEMY_Y),e
