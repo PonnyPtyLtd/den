@@ -806,8 +806,13 @@ _drb_fillCol:
     jr z,_drb_fillNext
     push de
     push bc
-    xor a
-    call _drb_writeTile
+    ld a,(BorderPriority)
+    or a
+    jr z,+
+    ld a,BG_SOLID_BLACK
+    jr ++
++:  xor a                   ; tile 0 for non-priority
+++: call _drb_writeTile
     pop bc
     pop de
     inc b
@@ -880,11 +885,11 @@ _drb_topLoop:
     push bc
     push de
     ld a,b
-    and 1
+    call _drb_mod3
     jr nz,+
-    ld a,BG_ROOT_T
+    ld a,BG_ROOT_T2
     jr ++
-+:  ld a,BG_ROOT_T2
++:  ld a,BG_ROOT_T
 ++: call _drb_writeTile
     pop de
     pop bc
@@ -913,11 +918,11 @@ _drb_botLoop:
     push bc
     push de
     ld a,b
-    and 1
+    call _drb_mod3
     jr nz,+
-    ld a,BG_ROOT_B
+    ld a,BG_ROOT_B2
     jr ++
-+:  ld a,BG_ROOT_B2
++:  ld a,BG_ROOT_B
 ++: call _drb_writeTile
     pop de
     pop bc
@@ -942,11 +947,11 @@ _drb_leftLoop:
     push bc
     push de
     ld a,c
-    and 1
+    call _drb_mod3
     jr nz,+
-    ld a,BG_ROOT_L
+    ld a,BG_ROOT_L2
     jr ++
-+:  ld a,BG_ROOT_L2
++:  ld a,BG_ROOT_L
 ++: call _drb_writeTile
     pop de
     pop bc
@@ -975,11 +980,11 @@ _drb_rightLoop:
     push bc
     push de
     ld a,c
-    and 1
+    call _drb_mod3
     jr nz,+
-    ld a,BG_ROOT_R
+    ld a,BG_ROOT_R2
     jr ++
-+:  ld a,BG_ROOT_R2
++:  ld a,BG_ROOT_R
 ++: call _drb_writeTile
     pop de
     pop bc
@@ -987,6 +992,16 @@ _drb_rightLoop:
     dec e
     jr _drb_rightLoop
 _drb_rightDone:
+    ret
+
+; Helper: A mod 3. Sets Z flag if result == 0.
+; Preserves B,C.
+_drb_mod3:
+-:  cp 3
+    jr c,+
+    sub 3
+    jr -
++:  or a               ; set Z if remainder == 0
     ret
 
 ; Helper: write single 8x8 bg tile at hw position B,C with tile index A
@@ -1017,8 +1032,13 @@ _drb_writeTile:
     pop af
     out ($be),a             ; tile index
     push af
-    ld a,ATTR_PAL0
-    out ($be),a             ; attribute
+    ld a,(BorderPriority)
+    or a
+    jr z,+
+    ld a,ATTR_PAL0 | $10    ; priority bit = BG in front of sprites
+    jr ++
++:  ld a,ATTR_PAL0
+++: out ($be),a             ; attribute
     pop af
     ei
     ret

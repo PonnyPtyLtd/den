@@ -13,14 +13,14 @@ PaletteData:
 ; Palette 0 (terrain + font) - warm and visible
 ;  0: $00 black bg        1: $2A bright grey (font)
 ;  2: $14 warm brown      3: $19 saturated brick
-;  4: $2E bright tan      5: $0A medium grey
+;  4: $2E bright tan      5: $00 black (for priority fill)
 ;  6: $1A warm grey       7: $2F light speckle
 ;  8: $0C warm gold       9: $1F bright gold
 ; 10: $3F white
 ; 11: $05 dark brown (root shadow)  12: $06 warm brown (root body)
 ; 13: $0B golden brown (root highlight)  14: $04 dark green (leaf greeble)
 ; 15: $3F white
-.db $00,$2A,$14,$19,$2E,$0A,$1A,$2F,$0C,$1F,$3F,$05,$06,$0B,$04,$3F
+.db $00,$2A,$14,$19,$2E,$00,$1A,$2F,$0C,$1F,$3F,$05,$06,$0B,$04,$3F
 ; Palette 1 (sprites) - vivid and cute
 ;  0: $00 transparent     1: $08 forest green
 ;  2: $0C bright green    3: $1C vivid lime

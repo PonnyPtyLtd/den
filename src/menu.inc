@@ -10,6 +10,8 @@
 DrawRadialMenu:
     xor a
     ld (MenuCursor),a
+    ld a,1
+    ld (BorderPriority),a   ; priority = menu renders over sprites
     ; 3x3 grid of 16x16 icons = 6x6 hw tiles + 2 for border = 8x8
     ; Centered: hw tiles (12,7) to (19,14)
     ld b,12
@@ -273,6 +275,8 @@ CloseMenu:
 DrawInventory:
     call DisplayOff
     call ClearNameTable
+    xor a
+    ld (BorderPriority),a   ; no priority for full-screen menus
     ; Draw root border frame around inventory area
     ld b,1
     ld c,0

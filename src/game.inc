@@ -670,6 +670,8 @@ ShowRaceSelect:
     call DisplayOff
     call ClearNameTable
     ; Root border
+    xor a
+    ld (BorderPriority),a
     ld b,2
     ld c,0
     ld d,28
@@ -865,26 +867,14 @@ LoadRoundPool:
     jr _lrp_genRandom
 
 _lrp_round0:
-    ; Always generate 4 fresh weapons
+    ; Always generate 4 tier-1 items
     ld a,4
     ld (DraftPoolSize),a
-    ld b,4
-    ld hl,DraftPool
-_lrp_genWpn:
-    push bc
-    push hl
-    ld a,3
-    call GetRandomRange
-    inc a                   ; 1-3 = weapons
-    pop hl
-    ld (hl),a
-    inc hl
-    pop bc
-    djnz _lrp_genWpn
-    ret
+    ld a,4
+    jr _lrp_genRandom
 
 _lrp_round1:
-    ; Generate 3 random equipment items
+    ; Generate 3 random tier-1 equipment
     ld a,3
 _lrp_genRandom:
     ld (DraftPoolSize),a
@@ -893,9 +883,16 @@ _lrp_genRandom:
 _lrp_genLoop:
     push bc
     push hl
-    ld a,9
-    call GetRandomRange
-    inc a                   ; 1-9 = any equipment
+    ; Pick from tier 1 only: 1=stick, 4=wood shield, 7=reed armor, 10=helmet
+    ld a,4
+    call GetRandomRange     ; 0-3
+    ld c,a
+    ld b,0
+    push hl
+    ld hl,_lrp_tier1Table
+    add hl,bc
+    ld a,(hl)
+    pop hl
     pop hl
     ld (hl),a
     inc hl
@@ -903,10 +900,14 @@ _lrp_genLoop:
     djnz _lrp_genLoop
     ret
 
+_lrp_tier1Table: .db 1, 4, 7, 10  ; stick, wood shield, reed armor, helmet
+
 ShowDraftScreen:
     call DisplayOff
     call ClearNameTable
     ; Draw root border
+    xor a
+    ld (BorderPriority),a
     ld b,2
     ld c,0
     ld d,28
@@ -980,16 +981,20 @@ _sds_loop:
 
 DrawDraftCursor:
     ; Clear old cursors at column 5, rows 5,7,9,11
-    ld c,5
-    ld b,4
+    ld e,4                  ; counter (DON'T use B - _writeChar8 needs it)
+    ld c,5                  ; starting row
 _ddc_clr:
+    push de
     push bc
+    ld b,5                  ; column 5
     ld a,' '
     call _writeChar8
     pop bc
+    pop de
     inc c
     inc c
-    djnz _ddc_clr
+    dec e
+    jr nz,_ddc_clr
     ; Draw > at selected item (row = 5 + cursor*2)
     ld a,(DraftCursor)
     add a,a
@@ -1013,7 +1018,7 @@ DraftTick:
     dec a
     ld (DraftCursor),a
     call PlayMenuSfx
-    call ShowDraftScreen
+    call DrawDraftCursor
     ret
 +:
     ; DOWN
@@ -1030,7 +1035,7 @@ DraftTick:
     inc a
     ld (DraftCursor),a
     call PlayMenuSfx
-    call ShowDraftScreen
+    call DrawDraftCursor
     ret
 +:
     ; B1 - take selected item
@@ -1193,6 +1198,8 @@ ShowDeadScreen:
     call InitSadMusic
     call DisplayOff
     call ClearNameTable
+    xor a
+    ld (BorderPriority),a
     ld b,6
     ld c,8
     ld d,20
@@ -1214,6 +1221,8 @@ ShowWinScreen:
     call InitWinMusic
     call DisplayOff
     call ClearNameTable
+    xor a
+    ld (BorderPriority),a
     ld b,6
     ld c,8
     ld d,20

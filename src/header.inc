@@ -143,6 +143,7 @@ BorderX db
 BorderY db
 BorderW db
 BorderH db
+BorderPriority db       ; nonzero = use priority bit (menu over sprites)
 .ends
 
 ; Turn phases (extended)
