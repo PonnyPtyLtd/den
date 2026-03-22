@@ -15,10 +15,14 @@
 ;==============================================================
     push af
     push bc
+    push de
     push hl
     in a,($bf)
+    call CopySATToVRAM      ; copy sprite table first (time-critical)
     call UpdateMusic
+    call UpdateSfx
     pop hl
+    pop de
     pop bc
     pop af
     ei
@@ -56,7 +60,7 @@ _clearVRAM:
     or c
     jp nz,_clearVRAM
 
-    ; Load palette (32 bytes - both palettes)
+    ; Load palette (32 bytes)
     ld a,$00
     out ($bf),a
     ld a,$c0
@@ -66,7 +70,7 @@ _clearVRAM:
     ld c,$be
     otir
 
-    ; Load font tiles
+    ; Load font tiles (8x8, tiles 0-94, VRAM $0000)
     ld a,$00
     out ($bf),a
     ld a,$40
@@ -82,35 +86,54 @@ _loadFont:
     or c
     jp nz,_loadFont
 
-    ; Load custom game tiles at tile index 95 (VRAM $0BE0)
-    ; 7 tiles * 32 bytes = 224 bytes, loaded sequentially
+    ; Load background terrain tiles (tiles 95+, VRAM $0BE0)
     ld a,$E0
     out ($bf),a
     ld a,$0B | $40
     out ($bf),a
-    ld hl,WallTileData
-    ld bc,CustomTileCount * 32
-_loadGameTiles:
+    ld hl,WallTLData
+    ld bc,BgTileCount * 32
+_loadBgTiles:
     ld a,(hl)
     out ($be),a
     inc hl
     dec bc
     ld a,b
     or c
-    jp nz,_loadGameTiles
+    jp nz,_loadBgTiles
+
+    ; Load sprite tiles (tiles 256+, VRAM $2000)
+    ld a,$00
+    out ($bf),a
+    ld a,$20 | $40
+    out ($bf),a
+    ld hl,PlayerSpr1Data
+    ld bc,SpriteTileDataEnd-PlayerSpr1Data
+_loadSprTiles:
+    ld a,(hl)
+    out ($be),a
+    inc hl
+    dec bc
+    ld a,b
+    or c
+    jp nz,_loadSprTiles
+
+    ; Initialize sprites (hide all)
+    call InitSprites
 
     ; Initialize music
-    call InitMusic
+    call InitDungeonMusic
 
     ; Initialize game and show title
     call GameInit
     call ShowTitleScreen
 
-    ; Enable interrupts - music starts on first VBlank
+    ; Enable interrupts
     ei
 
 GameLoop:
     halt
+    call UpdateAnimation
     call GameTick
     jp GameLoop
 
@@ -125,6 +148,8 @@ GameLoop:
 .include "player.inc"
 .include "enemies.inc"
 .include "game.inc"
+.include "menu.inc"
+.include "sfx.inc"
 .include "music.inc"
 .include "data/strings.inc"
 .include "data/tiles.inc"

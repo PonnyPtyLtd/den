@@ -56,8 +56,7 @@ GetMapAddress:
     add hl,hl
     add hl,hl
     add hl,hl
-    add hl,hl
-    add hl,hl              ; Y * 32
+    add hl,hl              ; Y * 16
     ld c,b
     ld b,0
     add hl,bc              ; + X
@@ -77,6 +76,38 @@ GetMapTile:
     ret
 
 ;--------------------------------------------------------------
+; IsItemTile - check if ASCII char is an item
+; Input: A = char
+; Output: Z set if item, A preserved
+;--------------------------------------------------------------
+IsItemTile:
+    ; 9 item chars: w x y s S T a A B
+    cp 'w'
+    ret z
+    cp 'x'
+    ret z
+    cp 'y'
+    ret z
+    cp 's'
+    ret z
+    cp 'S'
+    ret z
+    cp 'T'
+    ret z
+    cp 'a'
+    ret z
+    cp 'A'
+    ret z
+    cp 'B'
+    ret z
+    cp 'h'
+    ret z
+    cp 'p'
+    ret z
+    cp 'f'
+    ret
+
+;--------------------------------------------------------------
 ; SetMapTile - write tile to map buffer
 ; Input: B=X, C=Y, A=tile
 ; Clobbers: HL, BC
@@ -92,17 +123,17 @@ SetMapTile:
 ; DisplayOff - disable display, keep VBlank IRQ enabled
 ;--------------------------------------------------------------
 DisplayOff:
-    ld a,%10100000
+    ld a,%10100010          ; bit 1 = 8x16 sprites, bit 5 = VBlank IRQ, bit 7 = unused
     out ($bf),a
     ld a,$81
     out ($bf),a
     ret
 
 ;--------------------------------------------------------------
-; DisplayOn - enable display and VBlank IRQ
+; DisplayOn - enable display and VBlank IRQ (preserving 8x16 sprite mode)
 ;--------------------------------------------------------------
 DisplayOn:
-    ld a,%11100000
+    ld a,%11100010          ; bit 1 = 8x16, bit 5 = VBlank, bit 6 = display on
     out ($bf),a
     ld a,$81
     out ($bf),a

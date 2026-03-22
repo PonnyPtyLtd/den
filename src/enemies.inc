@@ -32,11 +32,11 @@ _se_find:
     dec c
     jp z,_se_giveUp
     push bc
-    ld a,30
+    ld a,MAP_WIDTH-2
     call GetRandomRange
     inc a
     ld d,a
-    ld a,20
+    ld a,MAP_HEIGHT-2
     call GetRandomRange
     inc a
     ld e,a
@@ -58,6 +58,24 @@ _se_find:
 _se_place:
     ld (ix+ENEMY_X),d
     ld (ix+ENEMY_Y),e
+    ; Boss check: floor 5, first enemy slot = spider
+    ld a,(DungeonLevel)
+    cp 5
+    jr nz,_se_normalType
+    push ix
+    pop hl
+    push de
+    ld de,EnemyData
+    or a
+    sbc hl,de
+    pop de
+    jr nz,_se_normalType
+    ; BOSS SPIDER
+    ld (ix+ENEMY_TYPE),4
+    ld (ix+ENEMY_HP),20
+    ld (ix+ENEMY_ATK),8
+    jp _se_next
+_se_normalType:
     ; Type based on level
     ld a,(DungeonLevel)
     cp 3
@@ -84,6 +102,8 @@ _se_allTypes:
     inc a                   ; 1, 2, or 3
 _se_setType:
     ld (ix+ENEMY_TYPE),a
+    cp 4
+    jr z,_se_badger
     cp 3
     jr z,_se_orc
     cp 2
@@ -99,6 +119,10 @@ _se_snake:
 _se_orc:
     ld (ix+ENEMY_HP),8
     ld (ix+ENEMY_ATK),5
+    jr _se_next
+_se_badger:
+    ld (ix+ENEMY_HP),20
+    ld (ix+ENEMY_ATK),8
 _se_next:
     ld bc,ENEMY_SIZE
     add ix,bc
@@ -203,9 +227,24 @@ TryEnemyMove:
     ld a,(PlayerY)
     cp c
     jr nz,_tem_notPlayer
-    ; Attack player
+    ; Attack player: damage = max(ATK - DEF, 1)
+    ld a,(PlayerDef)
+    ld c,a
     ld a,(ix+ENEMY_ATK)
+    sub c                   ; ATK - DEF
+    jr c,_tem_minDmg
+    jr z,_tem_minDmg
+    jr _tem_doDmg
+_tem_minDmg:
+    ld a,1                  ; minimum 1 damage
+_tem_doDmg:
     ld b,a
+    ; Play hurt sound based on damage taken
+    push bc
+    ld a,b
+    call PlayHurtSfx
+    pop bc
+    ; Apply damage
     ld a,(PlayerHP)
     sub b
     jr nc,+
@@ -229,6 +268,8 @@ _tem_notPlayer:
     cp '.'
     jr z,_tem_canMove
     cp '>'
+    jr z,_tem_canMove
+    call IsItemTile
     jr z,_tem_canMove
     jr _tem_fail
 _tem_canMove:

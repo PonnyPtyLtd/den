@@ -42,4 +42,14 @@ run: $(OUTPUT_ROM)
 	@echo "Running ROM in Mednafen..."
 	mednafen $(OUTPUT_ROM)
 
-.PHONY: all clean run
+# Export all tiles to a BMP for editing
+tiles-export:
+	ruby tools/tile_export.rb tiles_export.bmp
+	@echo "Exported to tiles_export.bmp"
+
+# Import edited tiles back from BMP
+tiles-import:
+	ruby tools/tile_import.rb tiles_export.bmp
+	@echo "Imported from tiles_export.bmp"
+
+.PHONY: all clean run tiles-export tiles-import

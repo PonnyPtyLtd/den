@@ -10,6 +10,7 @@ ReadJoypad:
     cpl                     ; invert: 1=pressed
     and $3F                 ; mask to 6 buttons
     ld b,a                  ; B = current state (1=pressed)
+    ld (InputCurrent),a     ; save raw held state
     ld a,(InputPrevious)
     cpl                     ; NOT previous (1 where NOT pressed last frame)
     and b                   ; 1 = pressed now AND not last frame

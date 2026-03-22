@@ -1,75 +1,215 @@
 ;==============================================================
-; Rendering routines
+; Rendering routines - 16x16 tile system with sprites
 ;==============================================================
 
 ;--------------------------------------------------------------
-; MapCharToTile - convert map ASCII char to tile index
-; Input: A = ASCII char from MapBuffer
-; Output: A = tile index
+; MapCharToTileBG - map ASCII to background tile index
+; For items, show floor (items are sprites)
+; Input: A = ASCII char
+; Output: A = bg tile index, C = attribute
 ;--------------------------------------------------------------
-MapCharToTile:
+MapCharToTileBG:
+    ld c,ATTR_PAL0
     cp '#'
-    jr z,_mct_wall
+    jr z,_mctb_wall
     cp '.'
-    jr z,_mct_floor
+    jr z,_mctb_floor
     cp '>'
-    jr z,_mct_stairs
-    ; fallback: font tile
-    sub $20
+    jr z,_mctb_stairs
+    ; Items and unknown -> show floor underneath
+    ld a,BG_FLOOR
     ret
-_mct_wall:
-    ld a,TILE_WALL
+_mctb_wall:
+    ld a,BG_WALL_TL
     ret
-_mct_floor:
-    ld a,TILE_FLOOR
+_mctb_floor:
+    ld a,BG_FLOOR
     ret
-_mct_stairs:
-    ld a,TILE_STAIRS
+_mctb_stairs:
+    ld c,ATTR_PAL1
+    ld a,0              ; special: stairs uses 4 tiles
     ret
 
 ;--------------------------------------------------------------
-; WriteTileToVRAM - write single tile to name table
-; Input: B=X, C=Y, A=tile index, D=attribute
-; Clobbers: HL, BC
+; WriteTile16 - write a 16x16 logical tile to name table
+; Input: B=logical_X (0-15), C=logical_Y (0-10), A=ASCII char
+; Handles 2x2 hardware tile block
 ;--------------------------------------------------------------
-WriteTileToVRAM:
+WriteTile16:
+    push bc
     push af
-    push de
-    ; Calculate VRAM address = $3800 + (Y*32 + X) * 2
+    call MapCharToTileBG    ; A=tile, C=attr
+    pop af                  ; restore original char for stairs check
+    pop bc
+    cp '>'
+    jr z,_wt16_stairs
+    cp '#'
+    jr z,_wt16_wall
+    ; Floor (and items-as-floor): same tile in all 4 positions
+    push bc
+    ld d,BG_FLOOR
+    ld e,ATTR_PAL0
+    pop bc
+    jr _wt16_uniform
+
+_wt16_wall:
+    ; Wall: TL+TR pattern (BL=TL, BR=TR)
+    ; Top row
+    push bc
+    ld a,c
+    add a,a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a
+    di                      ; protect ALL port I/O
+    call _wt16_addr
+    ld a,BG_WALL_TL
+    out ($be),a
+    ld a,ATTR_PAL0
+    out ($be),a
+    ld a,BG_WALL_TR
+    out ($be),a
+    ld a,ATTR_PAL0
+    out ($be),a
+    ei
+    pop bc
+    ; Bottom row (same tiles)
+    push bc
+    ld a,c
+    add a,a
+    inc a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a
+    di
+    call _wt16_addr
+    ld a,BG_WALL_TL
+    out ($be),a
+    ld a,ATTR_PAL0
+    out ($be),a
+    ld a,BG_WALL_TR
+    out ($be),a
+    ld a,ATTR_PAL0
+    out ($be),a
+    ei
+    pop bc
+    ret
+
+_wt16_uniform:
+    ; D=tile, E=attr - write same tile in all 4 positions
+    ; Top row
+    push bc
+    ld a,c
+    add a,a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a
+    di
+    call _wt16_addr
+    ld a,d
+    out ($be),a
+    ld a,e
+    out ($be),a
+    ld a,d
+    out ($be),a
+    ld a,e
+    out ($be),a
+    ei
+    pop bc
+    ; Bottom row
+    push bc
+    ld a,c
+    add a,a
+    inc a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a
+    di
+    call _wt16_addr
+    ld a,d
+    out ($be),a
+    ld a,e
+    out ($be),a
+    ld a,d
+    out ($be),a
+    ld a,e
+    out ($be),a
+    ei
+    pop bc
+    ret
+
+_wt16_stairs:
+    ; Stairs: 4 distinct tiles
+    push bc
+    ld a,c
+    add a,a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a
+    di
+    call _wt16_addr
+    ld a,BG_STAIR_TL
+    out ($be),a
+    ld a,ATTR_PAL1
+    out ($be),a
+    ld a,BG_STAIR_TR
+    out ($be),a
+    ld a,ATTR_PAL1
+    out ($be),a
+    ei
+    pop bc
+    push bc
+    ld a,c
+    add a,a
+    inc a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a
+    di
+    call _wt16_addr
+    ld a,BG_STAIR_BL
+    out ($be),a
+    ld a,ATTR_PAL1
+    out ($be),a
+    ld a,BG_STAIR_BR
+    out ($be),a
+    ld a,ATTR_PAL1
+    out ($be),a
+    ei
+    pop bc
+    ret
+
+; Helper: set VRAM write address for hw tile (B=hw_x, C=hw_y)
+_wt16_addr:
     ld h,0
     ld l,c
     add hl,hl
     add hl,hl
     add hl,hl
     add hl,hl
-    add hl,hl              ; Y * 32
-    ld c,b
+    add hl,hl              ; hw_y * 32
+    ld a,b
+    ld c,a
     ld b,0
-    add hl,bc              ; + X
-    add hl,hl              ; * 2 (word entries)
+    add hl,bc              ; + hw_x
+    add hl,hl              ; * 2
     ld bc,$3800
-    add hl,bc              ; + name table base
-    ; Prepare data before critical section
-    pop de                  ; D = attribute
-    pop af                  ; A = tile index
-    ld b,a                  ; B = tile index
-    ld c,d                  ; C = attribute
-    ; Critical section: all port I/O
-    di
+    add hl,bc
     ld a,l
     out ($bf),a
     ld a,h
     or $40
     out ($bf),a
-    ld a,b
-    out ($be),a
-    ld a,c
-    out ($be),a
-    ei
     ret
 
 ;--------------------------------------------------------------
-; ClearNameTable - fill entire name table with zeroes
+; ClearNameTable
 ;--------------------------------------------------------------
 ClearNameTable:
     di
@@ -89,52 +229,44 @@ _cnt_loop:
     ret
 
 ;--------------------------------------------------------------
-; RenderFullMap - write MapBuffer + entities to VRAM
+; RenderFullMap - write entire MapBuffer as 16x16 bg tiles
 ; Call with display OFF
 ;--------------------------------------------------------------
 RenderFullMap:
-    di
-    ld a,$00
-    out ($bf),a
-    ld a,$38 | $40
-    out ($bf),a
-    ; Write 22 rows * 32 cols of terrain
-    ld hl,MapBuffer
-    ld de,MAP_SIZE
-_rfm_loop:
-    ld a,(hl)
-    push hl
-    push de
-    call MapCharToTile
-    pop de
-    pop hl
-    out ($be),a             ; tile index
-    ld a,(hl)
-    cp '>'                  ; stairs get bright palette
-    jr nz,_rfm_pal0
-    ld a,ATTR_PAL1
-    jr _rfm_attr
-_rfm_pal0:
-    ld a,ATTR_PAL0
-_rfm_attr:
-    out ($be),a
-    inc hl
-    dec de
+    ld e,0                  ; logical Y
+_rfm_yloop:
+    ld a,e
+    cp MAP_HEIGHT
+    jr z,_rfm_done
+    ld d,0                  ; logical X
+_rfm_xloop:
     ld a,d
-    or e
-    jr nz,_rfm_loop
-    ei
-    ; Overlay entities
-    call DrawPlayer
-    call DrawAllEnemies
+    cp MAP_WIDTH
+    jr z,_rfm_nextrow
+    ; Get map tile
+    ld b,d
+    ld c,e
+    push de
+    call GetMapTile         ; A = ASCII char
+    pop de
+    push de
+    ld b,d
+    ld c,e
+    call WriteTile16
+    pop de
+    inc d
+    jr _rfm_xloop
+_rfm_nextrow:
+    inc e
+    jr _rfm_yloop
+_rfm_done:
     ret
 
 ;--------------------------------------------------------------
-; RenderHUD - draw status line on row 22
+; RenderHUD - status bar on hw rows 22-23
 ;--------------------------------------------------------------
 RenderHUD:
     di
-    ; Row 22 VRAM = $3800 + 22*64 = $3D80
     ld a,$80
     out ($bf),a
     ld a,$3D | $40
@@ -152,28 +284,19 @@ RenderHUD:
     out ($be),a
     xor a
     out ($be),a
-    ; PlayerHP
     ld a,(PlayerHP)
     call WriteNumber2
-    ; "/"
     ld a,'/'-$20
     out ($be),a
     xor a
     out ($be),a
-    ; MaxHP
     ld a,(PlayerMaxHP)
     call WriteNumber2
-    ; "  Fl:"
+    ; " Fl:"
     xor a
-    out ($be),a
-    out ($be),a
     out ($be),a
     out ($be),a
     ld a,'F'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-    ld a,'l'-$20
     out ($be),a
     xor a
     out ($be),a
@@ -181,15 +304,49 @@ RenderHUD:
     out ($be),a
     xor a
     out ($be),a
-    ; Level number
     ld a,(DungeonLevel)
     call WriteNumber1
+    ; Equipment icons (using 8x8 tiles from sprite VRAM won't work for bg)
+    ; Show text indicators instead
+    xor a
+    out ($be),a
+    out ($be),a
+    xor a
+    out ($be),a
+    out ($be),a
+    ; Weapon indicator
+    ld a,(PlayerWeapon)
+    or a
+    jr z,_hud_noWpn
+    ld a,'+'-$20
+    out ($be),a
+    xor a
+    out ($be),a
+    jr _hud_arm
+_hud_noWpn:
+    ld a,'-'-$20
+    out ($be),a
+    xor a
+    out ($be),a
+_hud_arm:
+    ; Armor indicator
+    ld a,(PlayerArmor)
+    or a
+    jr z,_hud_noArm
+    ld a,'+'-$20
+    out ($be),a
+    xor a
+    out ($be),a
+    jr _hud_end
+_hud_noArm:
+    ld a,'-'-$20
+    out ($be),a
+    xor a
+    out ($be),a
+_hud_end:
     ei
     ret
 
-;--------------------------------------------------------------
-; WriteNumber2 - write 2-digit number (0-99) to VRAM
-;--------------------------------------------------------------
 WriteNumber2:
     ld b,0
 _wn2_div:
@@ -212,9 +369,6 @@ _wn2_done:
     out ($be),a
     ret
 
-;--------------------------------------------------------------
-; WriteNumber1 - write 1-digit number to VRAM
-;--------------------------------------------------------------
 WriteNumber1:
     add a,'0'-$20
     out ($be),a
@@ -223,130 +377,362 @@ WriteNumber1:
     ret
 
 ;--------------------------------------------------------------
-; EraseEntities - restore terrain under all entities
+; SPRITE MANAGEMENT
 ;--------------------------------------------------------------
-EraseEntities:
-    ; Erase player
-    ld a,(PlayerX)
-    ld b,a
-    ld a,(PlayerY)
-    ld c,a
-    push bc
-    call GetMapTile         ; A = terrain ASCII, clobbers BC
-    pop bc                  ; restore X,Y
-    ; Set palette before converting (MapCharToTile only touches A)
-    ld d,ATTR_PAL0
-    cp '>'
-    jr nz,+
-    ld d,ATTR_PAL1
-+:
-    call MapCharToTile      ; A = tile index
-    call WriteTileToVRAM
-    ; Erase enemies
-    ld ix,EnemyData
-    ld e,MAX_ENEMIES
-_ee_loop:
-    ld a,(ix+ENEMY_TYPE)
+
+; Hide all sprites by writing $D0 to first Y entry
+InitSprites:
+    di
+    ld a,$00
+    out ($bf),a
+    ld a,$3F | $40          ; SAT Y table at $3F00
+    out ($bf),a
+    ld a,$D0                ; terminator
+    out ($be),a
+    ei
+    ; Clear RAM buffer
+    ld a,$D0
+    ld (SatBufY),a
+    xor a
+    ld (NumSprites),a
+    ret
+
+; Copy SAT buffer to VRAM - called from VBlank handler
+CopySATToVRAM:
+    ; Copy Y coordinates to $3F00
+    di
+    ld a,$00
+    out ($bf),a
+    ld a,$3F | $40
+    out ($bf),a
+    ld a,(NumSprites)
     or a
-    jr z,_ee_skip
-    ld b,(ix+ENEMY_X)
-    ld c,(ix+ENEMY_Y)
+    jr z,_csat_term
+    ld b,a
+    ld hl,SatBufY
+_csat_yloop:
+    ld a,(hl)
+    out ($be),a
+    inc hl
+    djnz _csat_yloop
+_csat_term:
+    ld a,$D0                ; terminator after last sprite
+    out ($be),a
+    ; Copy X/tile pairs to $3F80
+    ld a,$80
+    out ($bf),a
+    ld a,$3F | $40
+    out ($bf),a
+    ld a,(NumSprites)
+    or a
+    jr z,_csat_done
+    add a,a                 ; * 2 (2 bytes per sprite)
+    ld b,a
+    ld hl,SatBufXN
+_csat_xloop:
+    ld a,(hl)
+    out ($be),a
+    inc hl
+    djnz _csat_xloop
+_csat_done:
+    ei
+    ret
+
+; BuildSpriteTable - rebuild SAT from game state
+BuildSpriteTable:
+    xor a
+    ld (NumSprites),a
+
+    ; --- Player ---
+    ld a,(PlayerPixelX)
+    ld d,a
+    ld a,(PlayerPixelY)
+    ld e,a
+    ld a,(AnimFrame)
+    or a
+    jr nz,_bst2_pf2
+    ld c,SPR_PLAYER1
+    jr _bst2_padd
+_bst2_pf2:
+    ld c,SPR_PLAYER2
+_bst2_padd:
+    call AddSprite16Simple
+
+    ; --- Enemies ---
+    ld hl,EnemyData
+    ld b,MAX_ENEMIES
+_bst2_eloop:
+    push bc
+    push hl
+    inc hl
+    inc hl
+    inc hl
+    ld a,(hl)              ; ENEMY_TYPE
+    pop hl
+    or a
+    jr z,_bst2_eskip
+    ; Pixel X = EnemyX * 16
+    ld a,(hl)              ; ENEMY_X
+    add a,a
+    add a,a
+    add a,a
+    add a,a
+    ld d,a
+    inc hl
+    ld a,(hl)              ; ENEMY_Y
+    add a,a
+    add a,a
+    add a,a
+    add a,a
+    ld e,a
+    inc hl
+    inc hl
+    ld a,(hl)              ; ENEMY_TYPE
+    dec hl
+    dec hl
+    dec hl
+    push hl
+    call GetEnemySprBase   ; A = sprite tile base
+    ld c,a
+    call AddSprite16Simple
+    pop hl
+    jr _bst2_enext
+_bst2_eskip:
+_bst2_enext:
+    push de
+    ld de,ENEMY_SIZE
+    add hl,de
+    pop de
+    pop bc
+    djnz _bst2_eloop
+
+    ; --- Items on ground (scan MapBuffer) ---
+    ld hl,MapBuffer
+    ld d,0                  ; logical Y
+_bst2_iy:
+    ld a,d
+    cp MAP_HEIGHT
+    jr z,_bst2_idone
+    ld e,0                  ; logical X
+_bst2_ix:
+    ld a,e
+    cp MAP_WIDTH
+    jr z,_bst2_iny
+    ld a,(hl)
+    call IsItemTile
+    jr nz,_bst2_inext
+    ; Item found! Create sprites
+    push hl
+    push de
+    ld a,e                  ; logical X
+    add a,a
+    add a,a
+    add a,a
+    add a,a                 ; * 16 = pixel X
+    push af
+    ld a,d                  ; logical Y
+    add a,a
+    add a,a
+    add a,a
+    add a,a                 ; * 16 = pixel Y
+    ld e,a
+    pop af
+    ld d,a
+    ; Determine sprite base from map char
+    ld a,(hl)
+    call GetItemSprBase
+    ld c,a
+    call AddSprite16Simple
+    pop de
+    pop hl
+_bst2_inext:
+    inc hl
+    inc e
+    jr _bst2_ix
+_bst2_iny:
+    inc d
+    jr _bst2_iy
+_bst2_idone:
+    ret
+
+; Helper: Add a 16x16 sprite (2 actual sprites in 8x16 mode)
+; D=pixelX, E=pixelY, C=sprite_tile_base
+; Uses NumSprites as index
+AddSprite16Simple:
+    ld a,(NumSprites)
+    cp MAX_SPRITES
+    ret nc                  ; no room
+    ; Sprite 1 (left half)
     push de
     push bc
-    call GetMapTile         ; A = terrain ASCII, clobbers BC
-    pop bc                  ; restore X,Y
-    ld d,ATTR_PAL0
-    cp '>'
-    jr nz,+
-    ld d,ATTR_PAL1
-+:
-    call MapCharToTile      ; A = tile index
-    call WriteTileToVRAM
+    ld b,a                  ; B = sprite index
+    ; Y coordinate
+    ld hl,SatBufY
+    ld c,b
+    ld b,0
+    add hl,bc
+    ld (hl),e               ; Y
+    ; X and tile
+    pop bc                  ; C = tile base
     pop de
-_ee_skip:
     push de
-    ld bc,ENEMY_SIZE
-    add ix,bc
-    pop de
-    dec e
-    jr nz,_ee_loop
-    ret
-
-;--------------------------------------------------------------
-; DrawEntities - draw all entities at current positions
-;--------------------------------------------------------------
-DrawEntities:
-    call DrawPlayer
-    call DrawAllEnemies
-    ret
-
-;--------------------------------------------------------------
-; DrawPlayer
-;--------------------------------------------------------------
-DrawPlayer:
-    ld a,(PlayerX)
-    ld b,a
-    ld a,(PlayerY)
+    push bc
+    ld a,(NumSprites)
+    add a,a                 ; * 2
+    ld hl,SatBufXN
+    ld b,0
     ld c,a
-    ld a,TILE_PLAYER
-    ld d,ATTR_PAL1
-    call WriteTileToVRAM
+    add hl,bc
+    ld (hl),d               ; X
+    inc hl
+    pop bc
+    ld (hl),c               ; tile base (left column)
+    ; Sprite 2 (right half)
+    ld a,(NumSprites)
+    inc a
+    ld (NumSprites),a
+    ; Y coordinate
+    pop de
+    push de
+    push bc
+    ld hl,SatBufY
+    ld c,a
+    ld b,0
+    add hl,bc
+    ld (hl),e               ; same Y
+    ; X and tile
+    ld a,(NumSprites)
+    add a,a
+    ld hl,SatBufXN
+    ld b,0
+    ld c,a
+    add hl,bc
+    pop bc
+    pop de
+    ld a,d
+    add a,8                 ; X + 8 for right half
+    ld (hl),a
+    inc hl
+    ld a,c
+    add a,2                 ; tile base + 2 for right column
+    ld (hl),a
+    ; Update count
+    ld a,(NumSprites)
+    inc a
+    ld (NumSprites),a
     ret
 
 ;--------------------------------------------------------------
-; DrawAllEnemies
+; GetEnemySprBase - sprite tile base for enemy type
 ;--------------------------------------------------------------
-DrawAllEnemies:
-    ld ix,EnemyData
-    ld e,MAX_ENEMIES
-_dae_loop:
-    ld a,(ix+ENEMY_TYPE)
-    or a
-    jr z,_dae_skip
-    push de
-    call GetEnemyTile       ; A = tile index
-    ld b,(ix+ENEMY_X)
-    ld c,(ix+ENEMY_Y)
-    ld d,ATTR_PAL1
-    call WriteTileToVRAM
-    pop de
-_dae_skip:
-    push de
-    ld bc,ENEMY_SIZE
-    add ix,bc
-    pop de
-    dec e
-    jr nz,_dae_loop
-    ret
-
-;--------------------------------------------------------------
-; GetEnemyTile - tile index for enemy type
-; Input: (ix+ENEMY_TYPE)
-; Output: A = tile index
-;--------------------------------------------------------------
-GetEnemyTile:
-    ld a,(ix+ENEMY_TYPE)
+GetEnemySprBase:
     cp 1
-    jr z,_get_rat
+    jr z,_gesb_rat
     cp 2
-    jr z,_get_snake
-    ld a,TILE_ORC
+    jr z,_gesb_snake
+    cp 4
+    jr z,_gesb_badger
+    ld a,SPR_ORC
     ret
-_get_rat:
-    ld a,TILE_RAT
+_gesb_rat:
+    ld a,SPR_RAT
     ret
-_get_snake:
-    ld a,TILE_SNAKE
+_gesb_snake:
+    ld a,SPR_SNAKE
+    ret
+_gesb_badger:
+    ld a,SPR_BADGER
+    ret
+
+;--------------------------------------------------------------
+; GetItemSprBase - sprite tile base for item on ground
+;--------------------------------------------------------------
+GetItemSprBase:
+    ; Per-tier weapons
+    cp 'w'
+    jr z,_gisb_w1
+    cp 'x'
+    jr z,_gisb_w2
+    cp 'y'
+    jr z,_gisb_w3
+    ; Per-tier shields
+    cp 's'
+    jr z,_gisb_s1
+    cp 'S'
+    jr z,_gisb_s2
+    cp 'T'
+    jr z,_gisb_s3
+    ; Per-tier armor
+    cp 'a'
+    jr z,_gisb_a1
+    cp 'A'
+    jr z,_gisb_a2
+    cp 'B'
+    jr z,_gisb_a3
+    cp 'h'
+    jr z,_gisb_s1
+    cp 'p'
+    jr z,_gisb_pot
+    cp 'f'
+    jr z,_gisb_wand
+    ld a,SPR_WEAPON1
+    ret
+_gisb_w1: ld a,SPR_WEAPON1
+    ret
+_gisb_w2: ld a,SPR_WEAPON2
+    ret
+_gisb_w3: ld a,SPR_WEAPON3
+    ret
+_gisb_s1: ld a,SPR_SHIELD1
+    ret
+_gisb_s2: ld a,SPR_SHIELD2
+    ret
+_gisb_s3: ld a,SPR_SHIELD3
+    ret
+_gisb_a1: ld a,SPR_ARMOR1
+    ret
+_gisb_a2: ld a,SPR_ARMOR2
+    ret
+_gisb_a3: ld a,SPR_ARMOR3
+    ret
+_gisb_pot: ld a,SPR_POTION
+    ret
+_gisb_wand: ld a,SPR_WAND
+    ret
+
+;--------------------------------------------------------------
+; UpdatePlayerSprite - update player sprite positions in SAT
+; Uses PlayerPixelX/Y and AnimFrame
+;--------------------------------------------------------------
+UpdatePlayerSprite:
+    ; Player is always sprites 0 and 1
+    ld a,(PlayerPixelY)
+    ld (SatBufY+0),a
+    ld (SatBufY+1),a
+    ld a,(PlayerPixelX)
+    ld (SatBufXN+0),a
+    add a,8
+    ld (SatBufXN+2),a
+    ; Set tile based on animation frame
+    ld a,(AnimFrame)
+    or a
+    jr nz,_ups_f2
+    ld a,SPR_PLAYER1
+    jr _ups_set
+_ups_f2:
+    ld a,SPR_PLAYER2
+_ups_set:
+    ld (SatBufXN+1),a
+    add a,2
+    ld (SatBufXN+3),a
     ret
 
 ;--------------------------------------------------------------
 ; PrintString - null-terminated ASCII string to name table
-; Input: B=startX, C=startY, HL=string
-; Clobbers: AF, HL, BC
+; Input: B=startX, C=startY, HL=string (uses 8x8 font tiles)
 ;--------------------------------------------------------------
 PrintString:
     push hl
-    ; Calculate VRAM address
     ld h,0
     ld l,c
     add hl,hl
@@ -380,3 +766,263 @@ _ps_loop:
 _ps_done:
     ei
     ret
+
+;--------------------------------------------------------------
+; DrawRootBorder - draw root/vine frame around a rectangle
+; Input: B=x, C=y (top-left hw tile), D=width, E=height (in hw tiles)
+; Uses palette 0
+;--------------------------------------------------------------
+DrawRootBorder:
+    ; Save params to RAM variables (NOT ROM!)
+    ld a,b
+    ld (BorderX),a
+    ld a,c
+    ld (BorderY),a
+    ld a,d
+    ld (BorderW),a
+    ld a,e
+    ld (BorderH),a
+
+    ; --- 1. Fill interior with black ---
+    ld a,(BorderH)
+    sub 2
+    ld e,a                  ; inner height counter
+    ld a,(BorderY)
+    inc a
+    ld c,a                  ; start row
+_drb_fillRow:
+    ld a,e
+    or a
+    jr z,_drb_fillDone
+    ld a,(BorderW)
+    sub 2
+    ld d,a                  ; inner width counter
+    ld a,(BorderX)
+    inc a
+    ld b,a                  ; start col
+_drb_fillCol:
+    ld a,d
+    or a
+    jr z,_drb_fillNext
+    push de
+    push bc
+    xor a
+    call _drb_writeTile
+    pop bc
+    pop de
+    inc b
+    dec d
+    jr _drb_fillCol
+_drb_fillNext:
+    inc c
+    dec e
+    jr _drb_fillRow
+_drb_fillDone:
+
+    ; --- 2. Corners ---
+    ld a,(BorderX)
+    ld b,a
+    ld a,(BorderY)
+    ld c,a
+    ld a,BG_ROOT_TL
+    call _drb_writeTile
+
+    ld a,(BorderX)
+    ld b,a
+    ld a,(BorderW)
+    dec a
+    add a,b
+    ld b,a
+    ld a,(BorderY)
+    ld c,a
+    ld a,BG_ROOT_TR
+    call _drb_writeTile
+
+    ld a,(BorderX)
+    ld b,a
+    ld a,(BorderY)
+    ld c,a
+    ld a,(BorderH)
+    dec a
+    add a,c
+    ld c,a
+    ld a,BG_ROOT_BL
+    call _drb_writeTile
+
+    ld a,(BorderX)
+    ld b,a
+    ld a,(BorderW)
+    dec a
+    add a,b
+    ld b,a
+    ld a,(BorderY)
+    ld c,a
+    ld a,(BorderH)
+    dec a
+    add a,c
+    ld c,a
+    ld a,BG_ROOT_BR
+    call _drb_writeTile
+
+    ; --- 3. Top edge ---
+    ld a,(BorderW)
+    sub 2
+    ld e,a
+    ld a,(BorderX)
+    inc a
+    ld b,a
+    ld a,(BorderY)
+    ld c,a
+_drb_topLoop:
+    ld a,e
+    or a
+    jr z,_drb_topDone
+    push bc
+    push de
+    ld a,b
+    and 1
+    jr nz,+
+    ld a,BG_ROOT_T
+    jr ++
++:  ld a,BG_ROOT_T2
+++: call _drb_writeTile
+    pop de
+    pop bc
+    inc b
+    dec e
+    jr _drb_topLoop
+_drb_topDone:
+
+    ; --- 4. Bottom edge ---
+    ld a,(BorderW)
+    sub 2
+    ld e,a
+    ld a,(BorderX)
+    inc a
+    ld b,a
+    ld a,(BorderY)
+    ld c,a
+    ld a,(BorderH)
+    dec a
+    add a,c
+    ld c,a
+_drb_botLoop:
+    ld a,e
+    or a
+    jr z,_drb_botDone
+    push bc
+    push de
+    ld a,b
+    and 1
+    jr nz,+
+    ld a,BG_ROOT_B
+    jr ++
++:  ld a,BG_ROOT_B2
+++: call _drb_writeTile
+    pop de
+    pop bc
+    inc b
+    dec e
+    jr _drb_botLoop
+_drb_botDone:
+
+    ; --- 5. Left edge ---
+    ld a,(BorderH)
+    sub 2
+    ld e,a
+    ld a,(BorderX)
+    ld b,a
+    ld a,(BorderY)
+    inc a
+    ld c,a
+_drb_leftLoop:
+    ld a,e
+    or a
+    jr z,_drb_leftDone
+    push bc
+    push de
+    ld a,c
+    and 1
+    jr nz,+
+    ld a,BG_ROOT_L
+    jr ++
++:  ld a,BG_ROOT_L2
+++: call _drb_writeTile
+    pop de
+    pop bc
+    inc c
+    dec e
+    jr _drb_leftLoop
+_drb_leftDone:
+
+    ; --- 6. Right edge ---
+    ld a,(BorderH)
+    sub 2
+    ld e,a
+    ld a,(BorderX)
+    ld b,a
+    ld a,(BorderW)
+    dec a
+    add a,b
+    ld b,a
+    ld a,(BorderY)
+    inc a
+    ld c,a
+_drb_rightLoop:
+    ld a,e
+    or a
+    jr z,_drb_rightDone
+    push bc
+    push de
+    ld a,c
+    and 1
+    jr nz,+
+    ld a,BG_ROOT_R
+    jr ++
++:  ld a,BG_ROOT_R2
+++: call _drb_writeTile
+    pop de
+    pop bc
+    inc c
+    dec e
+    jr _drb_rightLoop
+_drb_rightDone:
+    ret
+
+; Helper: write single 8x8 bg tile at hw position B,C with tile index A
+_drb_writeTile:
+    push af
+    push bc
+    ; Calculate VRAM address
+    ld h,0
+    ld l,c
+    add hl,hl
+    add hl,hl
+    add hl,hl
+    add hl,hl
+    add hl,hl              ; Y * 32
+    ld c,b
+    ld b,0
+    add hl,bc
+    add hl,hl              ; * 2
+    ld bc,$3800
+    add hl,bc
+    di
+    ld a,l
+    out ($bf),a
+    ld a,h
+    or $40
+    out ($bf),a
+    pop bc
+    pop af
+    out ($be),a             ; tile index
+    push af
+    ld a,ATTR_PAL0
+    out ($be),a             ; attribute
+    pop af
+    ei
+    ret
+
+; Temporary storage for BuildSpriteTable
+BuildSprIXSave: .dw 0
+BuildSprIYSave: .dw 0

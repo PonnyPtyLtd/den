@@ -37,24 +37,24 @@ PlaceRooms:
     ld c,a
 _pr_loop:
     push bc
-    ; Width: 4 + rand(0..4)
-    ld a,5
-    call GetRandomRange
-    add a,4
-    ld (ix+2),a
-    ; Height: 3 + rand(0..3)
+    ; Width: 2 + rand(0..3)
     ld a,4
     call GetRandomRange
-    add a,3
+    add a,2
+    ld (ix+2),a
+    ; Height: 2 + rand(0..2)
+    ld a,3
+    call GetRandomRange
+    add a,2
     ld (ix+3),a
-    ; X: 1 + rand(0 .. 30-w)
-    ld a,31
+    ; X: 1 + rand(0 .. MAP_WIDTH-2-w)
+    ld a,MAP_WIDTH-1
     sub (ix+2)
     call GetRandomRange
     inc a
     ld (ix+0),a
-    ; Y: 1 + rand(0 .. 20-h)
-    ld a,21
+    ; Y: 1 + rand(0 .. MAP_HEIGHT-2-h)
+    ld a,MAP_HEIGHT-1
     sub (ix+3)
     call GetRandomRange
     inc a
