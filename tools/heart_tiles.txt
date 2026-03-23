@@ -1,0 +1,59 @@
+; Heart tiles for HP display (palette 0)
+; B=dark brown(11) outline, F=red(15) fill, A=white(10) empty container
+; 0=black background. White container shows through where red is removed.
+; Fill removed: top-right → bottom-right → bottom-left → top-left
+
+; Full heart (4/4)
+@HeartFullData
+0BB0BB00
+BFFBFFB0
+BFFFFFB0
+BFFFFFB0
+BFFFFFB0
+0BFFFB00
+00BFB000
+000B0000
+
+; 3/4 heart (top-right chunk removed, white shows)
+@Heart34Data
+0BB0BB00
+BFFBAAB0
+BFFFAAB0
+BFFFFFB0
+BFFFFFB0
+0BFFFB00
+00BFB000
+000B0000
+
+; Half heart (right half white)
+@HeartHalfData
+0BB0BB00
+BFFBAAB0
+BFFFAAB0
+BFFFAAB0
+BFFFAAB0
+0BFFAB00
+00BFB000
+000B0000
+
+; 1/4 heart (only top-left red, rest white)
+@Heart14Data
+0BB0BB00
+BFFBAAB0
+BFFFAAB0
+BAAAAAB0
+BAAAAAB0
+0BAAAB00
+00BAB000
+000B0000
+
+; Empty heart (white container only)
+@HeartEmptyData
+0BB0BB00
+BAABAAB0
+BAAAAAB0
+BAAAAAB0
+BAAAAAB0
+0BAAAB00
+00BAB000
+000B0000

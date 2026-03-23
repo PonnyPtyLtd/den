@@ -19,8 +19,8 @@ PaletteData:
 ; 10: $3F white
 ; 11: $05 dark brown (root shadow)  12: $06 warm brown (root body)
 ; 13: $0B golden brown (root highlight)  14: $04 dark green (leaf greeble)
-; 15: $3F white
-.db $00,$2A,$14,$19,$2E,$00,$1A,$2F,$0C,$1F,$3F,$05,$06,$0B,$04,$3F
+; 15: $03 red (hearts)
+.db $00,$2A,$14,$19,$2E,$00,$1A,$2F,$0C,$1F,$3F,$05,$06,$0B,$04,$03
 ; Palette 1 (sprites) - vivid and cute
 ;  0: $00 transparent     1: $08 forest green
 ;  2: $0C bright green    3: $1C vivid lime

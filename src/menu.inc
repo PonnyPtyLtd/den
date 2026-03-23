@@ -1322,10 +1322,10 @@ UseSelected:
     ret
 
 _us_potion:
-    ; Heal 10 HP (cap at MaxHP)
+    ; Heal 8 HP (2 hearts, cap at MaxHP)
     push hl
     ld a,(PlayerHP)
-    add a,10
+    add a,8
     ld b,a
     ld a,(PlayerMaxHP)
     cp b

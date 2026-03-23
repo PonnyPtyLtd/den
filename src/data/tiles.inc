@@ -13,7 +13,7 @@
 .define ITEM_ARMOR_2   8   ; Spidershell Armor (+5 MaxHP)
 .define ITEM_ARMOR_3   9   ; Bog Oak Armor (+10 MaxHP)
 .define ITEM_HELMET   10  ; Helmet (+1 DEF)
-.define ITEM_POTION   11  ; Healing Potion (+10 HP)
+.define ITEM_POTION   11  ; Healing Potion (+8 HP, 2 hearts)
 .define ITEM_WAND     12  ; Wand of Fire (zap nearest enemy, 10 dmg)
 
 ; Background tile indices
@@ -599,7 +599,69 @@ GreebleTileTable:
 .db BG_GREEBLE_MOLE, BG_GREEBLE_ROOT1, BG_GREEBLE_ROOT2
 .db BG_GREEBLE_ROOT3
 
-BgTileCount = 50
+; === HEART TILES (palette 0) - HP display in 1/4 increments ===
+; Color 15 = red (fill), color 11 = dark brown (outline)
+.define BG_HEART_FULL  145
+.define BG_HEART_34    146
+.define BG_HEART_HALF  147
+.define BG_HEART_14    148
+.define BG_HEART_EMPTY 149
+
+HeartFullData:
+.db $6c,$6c,$00,$6c
+.db $fe,$fe,$6c,$fe
+.db $fe,$fe,$7c,$fe
+.db $fe,$fe,$7c,$fe
+.db $fe,$fe,$7c,$fe
+.db $7c,$7c,$38,$7c
+.db $38,$38,$10,$38
+.db $10,$10,$00,$10
+
+Heart34Data:
+.db $6c,$6c,$00,$6c
+.db $f2,$fe,$60,$fe
+.db $f2,$fe,$70,$fe
+.db $fe,$fe,$7c,$fe
+.db $fe,$fe,$7c,$fe
+.db $7c,$7c,$38,$7c
+.db $38,$38,$10,$38
+.db $10,$10,$00,$10
+
+HeartHalfData:
+.db $6c,$6c,$00,$6c
+.db $f2,$fe,$60,$fe
+.db $f2,$fe,$70,$fe
+.db $f2,$fe,$70,$fe
+.db $f2,$fe,$70,$fe
+.db $74,$7c,$30,$7c
+.db $38,$38,$10,$38
+.db $10,$10,$00,$10
+
+Heart14Data:
+.db $6c,$6c,$00,$6c
+.db $f2,$fe,$60,$fe
+.db $f2,$fe,$70,$fe
+.db $82,$fe,$00,$fe
+.db $82,$fe,$00,$fe
+.db $44,$7c,$00,$7c
+.db $28,$38,$00,$38
+.db $10,$10,$00,$10
+
+HeartEmptyData:
+.db $6c,$6c,$00,$6c
+.db $92,$fe,$00,$fe
+.db $82,$fe,$00,$fe
+.db $82,$fe,$00,$fe
+.db $82,$fe,$00,$fe
+.db $44,$7c,$00,$7c
+.db $28,$38,$00,$38
+.db $10,$10,$00,$10
+
+; Heart tile lookup (indexed by quarter-fill 0-4)
+HeartTileTable:
+.db BG_HEART_EMPTY, BG_HEART_14, BG_HEART_HALF, BG_HEART_34, BG_HEART_FULL
+
+BgTileCount = 55
 
 ; Neighbor mask lookup table for contextual wall tiles
 ; 4-bit mask: bit3=up open, bit2=right open, bit1=down open, bit0=left open

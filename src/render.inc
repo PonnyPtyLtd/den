@@ -465,31 +465,50 @@ RenderHUD:
     out ($bf),a
     ld a,$3D | $40
     out ($bf),a
-    ; "HP:"
-    ld a,'H'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-    ld a,'P'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-    ld a,':'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-    ld a,(PlayerHP)
-    call WriteNumber2
-    ld a,'/'-$20
-    out ($be),a
-    xor a
-    out ($be),a
+    ; Hearts: each heart = 4 HP, shown in 1/4 increments
+    ; Draw ceil(MaxHP/4) hearts
     ld a,(PlayerMaxHP)
-    call WriteNumber2
-    ; " Fl:"
+    add a,3
+    rrca
+    rrca
+    and $3F                 ; ceil(MaxHP/4) = (MaxHP+3)/4
+    ld b,a                  ; B = total hearts to draw
+    ld a,(PlayerHP)
+    ld c,a                  ; C = remaining HP
+_hud_heartLoop:
+    ld a,b
+    or a
+    jr z,_hud_heartsDone
+    ; Determine fill for this heart: min(C, 4)
+    ld a,c
+    cp 5
+    jr c,+
+    ld a,4                  ; cap at 4
++:  ; A = quarter-fill (0-4), look up tile
+    push bc
+    ld hl,HeartTileTable
+    ld c,a
+    ld b,0
+    add hl,bc
+    ld a,(hl)
+    out ($be),a             ; heart tile
+    xor a
+    out ($be),a             ; attr
+    pop bc
+    ; Subtract 4 from remaining HP (saturate at 0)
+    ld a,c
+    sub 4
+    jr nc,+
+    xor a
++:  ld c,a
+    dec b
+    jr _hud_heartLoop
+_hud_heartsDone:
+    ; Space
     xor a
     out ($be),a
     out ($be),a
+    ; "F:" and floor number
     ld a,'F'-$20
     out ($be),a
     xor a
@@ -500,44 +519,6 @@ RenderHUD:
     out ($be),a
     ld a,(DungeonLevel)
     call WriteNumber1
-    ; Equipment icons (using 8x8 tiles from sprite VRAM won't work for bg)
-    ; Show text indicators instead
-    xor a
-    out ($be),a
-    out ($be),a
-    xor a
-    out ($be),a
-    out ($be),a
-    ; Weapon indicator
-    ld a,(PlayerWeapon)
-    or a
-    jr z,_hud_noWpn
-    ld a,'+'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-    jr _hud_arm
-_hud_noWpn:
-    ld a,'-'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-_hud_arm:
-    ; Armor indicator
-    ld a,(PlayerArmor)
-    or a
-    jr z,_hud_noArm
-    ld a,'+'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-    jr _hud_end
-_hud_noArm:
-    ld a,'-'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-_hud_end:
     ei
     ret
 
