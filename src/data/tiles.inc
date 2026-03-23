@@ -602,54 +602,54 @@ GreebleRoot3Data:
 .define BG_HEART_EMPTY 149
 
 HeartFullData:
-.db $6c,$6c,$00,$6c
-.db $fe,$fe,$6c,$fe
-.db $fe,$fe,$7c,$fe
-.db $fe,$fe,$7c,$fe
-.db $fe,$fe,$7c,$fe
-.db $7c,$7c,$38,$7c
-.db $38,$38,$10,$38
-.db $10,$10,$00,$10
+.db $6c,$6c,$6c,$6c
+.db $fe,$fe,$fe,$fe
+.db $fe,$fe,$fe,$fe
+.db $fe,$fe,$fe,$fe
+.db $fe,$fe,$fe,$fe
+.db $7c,$7c,$7c,$7c
+.db $38,$38,$38,$38
+.db $10,$10,$10,$10
 
 Heart34Data:
-.db $6c,$6c,$00,$6c
-.db $f2,$fe,$60,$fe
-.db $f2,$fe,$70,$fe
-.db $fe,$fe,$7c,$fe
-.db $fe,$fe,$7c,$fe
-.db $7c,$7c,$38,$7c
-.db $38,$38,$10,$38
-.db $10,$10,$00,$10
+.db $60,$6c,$60,$6c
+.db $f0,$f2,$f0,$f2
+.db $f0,$f2,$f0,$f2
+.db $fe,$fe,$fe,$fe
+.db $fe,$fe,$fe,$fe
+.db $7c,$7c,$7c,$7c
+.db $38,$38,$38,$38
+.db $10,$10,$10,$10
 
 HeartHalfData:
-.db $6c,$6c,$00,$6c
-.db $f2,$fe,$60,$fe
-.db $f2,$fe,$70,$fe
-.db $f2,$fe,$70,$fe
-.db $f2,$fe,$70,$fe
-.db $74,$7c,$30,$7c
-.db $38,$38,$10,$38
-.db $10,$10,$00,$10
+.db $60,$6c,$60,$6c
+.db $f0,$f2,$f0,$f2
+.db $f0,$f2,$f0,$f2
+.db $f0,$f2,$f0,$f2
+.db $f0,$f2,$f0,$f2
+.db $70,$74,$70,$74
+.db $30,$38,$30,$38
+.db $10,$10,$10,$10
 
 Heart14Data:
-.db $6c,$6c,$00,$6c
-.db $f2,$fe,$60,$fe
-.db $f2,$fe,$70,$fe
-.db $82,$fe,$00,$fe
-.db $82,$fe,$00,$fe
-.db $44,$7c,$00,$7c
-.db $28,$38,$00,$38
-.db $10,$10,$00,$10
+.db $60,$6c,$60,$6c
+.db $f0,$f2,$f0,$f2
+.db $f0,$f2,$f0,$f2
+.db $f0,$f2,$f0,$f2
+.db $00,$82,$00,$82
+.db $00,$44,$00,$44
+.db $00,$28,$00,$28
+.db $00,$10,$00,$10
 
 HeartEmptyData:
-.db $6c,$6c,$00,$6c
-.db $92,$fe,$00,$fe
-.db $82,$fe,$00,$fe
-.db $82,$fe,$00,$fe
-.db $82,$fe,$00,$fe
-.db $44,$7c,$00,$7c
-.db $28,$38,$00,$38
-.db $10,$10,$00,$10
+.db $00,$6c,$00,$6c
+.db $00,$92,$00,$92
+.db $00,$82,$00,$82
+.db $00,$82,$00,$82
+.db $00,$82,$00,$82
+.db $00,$44,$00,$44
+.db $00,$28,$00,$28
+.db $00,$10,$00,$10
 
 BgTileCount = 55
 
