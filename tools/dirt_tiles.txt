@@ -1,8 +1,10 @@
 ; Dirt/burrow wall tiles for contextual rendering
+; 3D slope effect: dark cliff edge → gradient slope → flat dirt surface
+; Slope uses ~50% of tile (4 rows/cols)
 ; Palette 0: 0=black 2=warm brown 3=dark brick 4=bright tan
 ;   B=dark brown(shadow) C=warm brown(alt) D=golden brown E=dark green
 
-; Interior dirt - no exposed edges
+; Interior dirt - no exposed edges, textured
 @DirtSolidData
 32232322
 23322232
@@ -25,12 +27,12 @@
 22232322
 
 ; Top edge exposed to floor (floor is ABOVE)
-; Rows 0-2: transition from open to dirt, row 3+: solid dirt
+; Row 0: void, rows 1-3: cliff edge + slope, rows 4-7: flat dirt
 @DirtEdgeTData
 00000000
-000E0B00
-0B322B00
-B2322320
+B0B0B00B
+3B3B3B3B
+33233232
 32232322
 22322232
 32232322
@@ -39,45 +41,45 @@ B2322320
 ; Top edge variant (for TR quadrant)
 @DirtEdgeT2Data
 00000000
-00B00E00
-00B232B0
-02322320
+0B00B0B0
+B3B33B3B
+23323232
 22322232
 32232322
 22322232
 32232322
 
 ; Left edge exposed to floor (floor is to the LEFT)
-; Left cols: transition from open to dirt
+; Col 0: void, cols 1-3: cliff + slope, cols 4-7: flat dirt
 @DirtEdgeLData
-00B32232
-0B232322
-00322232
-0B232322
-00B22322
-00232232
-0B322322
-00232322
+0B332232
+0BB32322
+0B3B2232
+0B332322
+0BB32232
+0B332322
+0B3B2232
+0B332322
 
 ; Left edge variant (for BL quadrant)
 @DirtEdgeL2Data
-0B232322
-00B22232
-00232322
-0B322232
-00232322
-0B232232
-00B32322
-00232232
+0BB32322
+0B332232
+0BB32322
+0B3B2232
+0B332322
+0BB32232
+0B332322
+0B3B2232
 
 ; Corner: floor ABOVE and to the LEFT
-; Top-left is open, bottom-right is dirt. Diagonal transition.
+; Top-left void, diagonal cliff slope to bottom-right dirt
 @DirtCornerTLData
 00000000
-0000000E
-00000B30
-000B2D20
-00B32232
-0B222322
-B3232232
-23222322
+0000B0BB
+000BB3B3
+00B33232
+0BB32322
+0B332232
+B3B22322
+33232232
