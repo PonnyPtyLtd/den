@@ -433,7 +433,126 @@ SolidBlackData:
 .db $ff,$00,$ff,$00
 .db $ff,$00,$ff,$00
 
-BgTileCount = 36
+; === CONTEXTUAL DIRT WALL TILES (palette 0) ===
+; 7 tiles: solid(x2), top edge(x2), left edge(x2), corner
+; Right/bottom edges and other corners via H-flip/V-flip attributes
+.define BG_DIRT_SOLID   131
+.define BG_DIRT_SOLID_V 132
+.define BG_DIRT_EDGE_T  133
+.define BG_DIRT_EDGE_T2 134
+.define BG_DIRT_EDGE_L  135
+.define BG_DIRT_EDGE_L2 136
+.define BG_DIRT_CORNER  137
+
+DirtSolidData:
+.db $94,$ff,$00,$00
+.db $62,$ff,$00,$00
+.db $14,$ff,$00,$00
+.db $a1,$ff,$00,$00
+.db $12,$ff,$00,$00
+.db $44,$ff,$00,$00
+.db $92,$ff,$00,$00
+.db $24,$ff,$00,$00
+
+DirtSolidV2Data:
+.db $22,$ff,$00,$00
+.db $94,$ff,$00,$00
+.db $42,$ff,$00,$00
+.db $28,$ff,$00,$00
+.db $84,$ff,$00,$00
+.db $12,$ff,$00,$00
+.db $a2,$ff,$00,$00
+.db $14,$ff,$00,$00
+
+DirtEdgeTData:
+.db $00,$00,$00,$00
+.db $04,$14,$10,$14
+.db $64,$7c,$00,$44
+.db $a4,$fe,$00,$80
+.db $94,$ff,$00,$00
+.db $22,$ff,$00,$00
+.db $94,$ff,$00,$00
+.db $44,$ff,$00,$00
+
+DirtEdgeT2Data:
+.db $00,$00,$00,$00
+.db $20,$24,$04,$24
+.db $2a,$3e,$00,$22
+.db $24,$7e,$00,$00
+.db $22,$ff,$00,$00
+.db $94,$ff,$00,$00
+.db $22,$ff,$00,$00
+.db $94,$ff,$00,$00
+
+DirtEdgeLData:
+.db $32,$3f,$00,$20
+.db $54,$7f,$00,$40
+.db $22,$3f,$00,$00
+.db $54,$7f,$00,$40
+.db $24,$3f,$00,$20
+.db $12,$3f,$00,$00
+.db $64,$7f,$00,$40
+.db $14,$3f,$00,$00
+
+DirtEdgeL2Data:
+.db $54,$7f,$00,$40
+.db $22,$3f,$00,$20
+.db $14,$3f,$00,$00
+.db $62,$7f,$00,$40
+.db $14,$3f,$00,$00
+.db $52,$7f,$00,$40
+.db $34,$3f,$00,$20
+.db $12,$3f,$00,$00
+
+DirtCornerTLData:
+.db $00,$00,$00,$00
+.db $00,$01,$01,$01
+.db $06,$06,$00,$04
+.db $14,$1a,$04,$14
+.db $32,$3f,$00,$20
+.db $44,$7f,$00,$40
+.db $d2,$ff,$00,$80
+.db $44,$ff,$00,$00
+
+; Neighbor mask lookup table for contextual wall tiles
+; 4-bit mask: bit3=up open, bit2=right open, bit1=down open, bit0=left open
+; Each entry: TL_tile, TL_attr, TR_tile, TR_attr, BL_tile, BL_attr, BR_tile, BR_attr
+; Flip bits in attr: $02=H-flip, $04=V-flip, $06=HV-flip
+WallQuadrantTable:
+; Mask 0 (0000): all wall neighbors - full interior
+.db BG_DIRT_SOLID,  $00, BG_DIRT_SOLID_V,$00, BG_DIRT_SOLID_V,$00, BG_DIRT_SOLID,  $00
+; Mask 1 (0001): left open
+.db BG_DIRT_EDGE_L, $00, BG_DIRT_SOLID_V,$00, BG_DIRT_EDGE_L2,$00, BG_DIRT_SOLID,  $00
+; Mask 2 (0010): down open
+.db BG_DIRT_SOLID,  $00, BG_DIRT_SOLID_V,$00, BG_DIRT_EDGE_T, $04, BG_DIRT_EDGE_T2,$04
+; Mask 3 (0011): down+left open
+.db BG_DIRT_EDGE_L, $00, BG_DIRT_SOLID_V,$00, BG_DIRT_CORNER, $04, BG_DIRT_EDGE_T2,$04
+; Mask 4 (0100): right open
+.db BG_DIRT_SOLID,  $00, BG_DIRT_EDGE_L, $02, BG_DIRT_SOLID_V,$00, BG_DIRT_EDGE_L2,$02
+; Mask 5 (0101): right+left open
+.db BG_DIRT_EDGE_L, $00, BG_DIRT_EDGE_L, $02, BG_DIRT_EDGE_L2,$00, BG_DIRT_EDGE_L2,$02
+; Mask 6 (0110): right+down open
+.db BG_DIRT_SOLID,  $00, BG_DIRT_EDGE_L, $02, BG_DIRT_EDGE_T, $04, BG_DIRT_CORNER, $06
+; Mask 7 (0111): right+down+left open
+.db BG_DIRT_EDGE_L, $00, BG_DIRT_EDGE_L, $02, BG_DIRT_CORNER, $04, BG_DIRT_CORNER, $06
+; Mask 8 (1000): up open
+.db BG_DIRT_EDGE_T, $00, BG_DIRT_EDGE_T2,$00, BG_DIRT_SOLID_V,$00, BG_DIRT_SOLID,  $00
+; Mask 9 (1001): up+left open
+.db BG_DIRT_CORNER, $00, BG_DIRT_EDGE_T2,$00, BG_DIRT_EDGE_L2,$00, BG_DIRT_SOLID,  $00
+; Mask 10 (1010): up+down open
+.db BG_DIRT_EDGE_T, $00, BG_DIRT_EDGE_T2,$00, BG_DIRT_EDGE_T, $04, BG_DIRT_EDGE_T2,$04
+; Mask 11 (1011): up+down+left open
+.db BG_DIRT_CORNER, $00, BG_DIRT_EDGE_T2,$00, BG_DIRT_CORNER, $04, BG_DIRT_EDGE_T2,$04
+; Mask 12 (1100): up+right open
+.db BG_DIRT_EDGE_T, $00, BG_DIRT_CORNER, $02, BG_DIRT_SOLID_V,$00, BG_DIRT_EDGE_L2,$02
+; Mask 13 (1101): up+right+left open
+.db BG_DIRT_CORNER, $00, BG_DIRT_CORNER, $02, BG_DIRT_EDGE_L2,$00, BG_DIRT_EDGE_L2,$02
+; Mask 14 (1110): up+right+down open
+.db BG_DIRT_EDGE_T, $00, BG_DIRT_CORNER, $02, BG_DIRT_EDGE_T, $04, BG_DIRT_CORNER, $06
+; Mask 15 (1111): all open
+.db BG_DIRT_CORNER, $00, BG_DIRT_CORNER, $02, BG_DIRT_CORNER, $04, BG_DIRT_CORNER, $06
+
+BgTileCount = 43
 
 ;==============================================================
 ; SPRITE TILES - cute cartoony characters filling 14x14 space

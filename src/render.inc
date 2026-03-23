@@ -10,17 +10,13 @@
 ;--------------------------------------------------------------
 MapCharToTileBG:
     ld c,ATTR_PAL0
-    cp '#'
-    jr z,_mctb_wall
     cp '.'
     jr z,_mctb_floor
     cp '>'
     jr z,_mctb_stairs
-    ; Items and unknown -> show floor underneath
+    ; Items, walls, and unknown -> show floor underneath
+    ; (walls are handled separately via WriteWallTile16)
     ld a,BG_FLOOR
-    ret
-_mctb_wall:
-    ld a,BG_WALL_TL
     ret
 _mctb_floor:
     ld a,BG_FLOOR
@@ -43,59 +39,12 @@ WriteTile16:
     pop bc
     cp '>'
     jr z,_wt16_stairs
-    cp '#'
-    jr z,_wt16_wall
     ; Floor (and items-as-floor): same tile in all 4 positions
     push bc
     ld d,BG_FLOOR
     ld e,ATTR_PAL0
     pop bc
     jr _wt16_uniform
-
-_wt16_wall:
-    ; Wall: TL+TR pattern (BL=TL, BR=TR)
-    ; Top row
-    push bc
-    ld a,c
-    add a,a
-    ld c,a
-    ld a,b
-    add a,a
-    ld b,a
-    di                      ; protect ALL port I/O
-    call _wt16_addr
-    ld a,BG_WALL_TL
-    out ($be),a
-    ld a,ATTR_PAL0
-    out ($be),a
-    ld a,BG_WALL_TR
-    out ($be),a
-    ld a,ATTR_PAL0
-    out ($be),a
-    ei
-    pop bc
-    ; Bottom row (same tiles)
-    push bc
-    ld a,c
-    add a,a
-    inc a
-    ld c,a
-    ld a,b
-    add a,a
-    ld b,a
-    di
-    call _wt16_addr
-    ld a,BG_WALL_TL
-    out ($be),a
-    ld a,ATTR_PAL0
-    out ($be),a
-    ld a,BG_WALL_TR
-    out ($be),a
-    ld a,ATTR_PAL0
-    out ($be),a
-    ei
-    pop bc
-    ret
 
 _wt16_uniform:
     ; D=tile, E=attr - write same tile in all 4 positions
@@ -229,6 +178,148 @@ _cnt_loop:
     ret
 
 ;--------------------------------------------------------------
+; GetWallNeighborMask - check cardinal neighbors of a wall cell
+; Input: D=logical X, E=logical Y
+; Output: A = 4-bit mask (bit3=up open, bit2=right, bit1=down, bit0=left)
+; "Open" = anything that is not '#'
+; Clobbers: HL, BC
+;--------------------------------------------------------------
+GetWallNeighborMask:
+    ; Compute center address: HL = MapBuffer + E*16 + D
+    ld h,0
+    ld l,e
+    add hl,hl
+    add hl,hl
+    add hl,hl
+    add hl,hl              ; Y * 16
+    ld a,d
+    ld c,a
+    ld b,0
+    add hl,bc              ; + X
+    ld bc,MapBuffer
+    add hl,bc              ; HL = &MapBuffer[Y*16+X]
+    ld c,0                  ; C = mask accumulator
+    ; Check UP (HL - 16)
+    ld a,e
+    or a
+    jr z,_gnm_noUp          ; Y=0, border = wall
+    push hl
+    ld a,c                  ; save mask
+    ld bc,-16
+    add hl,bc
+    ld c,a                  ; restore mask
+    ld a,(hl)
+    pop hl
+    cp '#'
+    jr z,_gnm_noUp
+    set 3,c
+_gnm_noUp:
+    ; Check RIGHT (HL + 1)
+    ld a,d
+    cp MAP_WIDTH-1
+    jr z,_gnm_noRight       ; X=15, border = wall
+    inc hl
+    ld a,(hl)
+    dec hl
+    cp '#'
+    jr z,_gnm_noRight
+    set 2,c
+_gnm_noRight:
+    ; Check DOWN (HL + 16)
+    ld a,e
+    cp MAP_HEIGHT-1
+    jr z,_gnm_noDown        ; Y=10, border = wall
+    push hl
+    ld a,c                  ; save mask
+    ld bc,16
+    add hl,bc
+    ld c,a                  ; restore mask
+    ld a,(hl)
+    pop hl
+    cp '#'
+    jr z,_gnm_noDown
+    set 1,c
+_gnm_noDown:
+    ; Check LEFT (HL - 1)
+    ld a,d
+    or a
+    jr z,_gnm_noLeft        ; X=0, border = wall
+    dec hl
+    ld a,(hl)
+    cp '#'
+    jr z,_gnm_noLeft
+    set 0,c
+_gnm_noLeft:
+    ld a,c                  ; return mask in A
+    ret
+
+;--------------------------------------------------------------
+; WriteWallTile16 - write contextual dirt wall tile
+; Input: B=logical_X, C=logical_Y, A=neighbor mask (0-15)
+; Uses DE to carry table pointer across _wt16_addr calls
+;--------------------------------------------------------------
+WriteWallTile16:
+    ; Compute table pointer: DE = WallQuadrantTable + mask*8
+    push bc                 ; save position
+    add a,a
+    add a,a
+    add a,a                 ; mask * 8
+    ld c,a
+    ld b,0
+    ld hl,WallQuadrantTable
+    add hl,bc
+    ld d,h
+    ld e,l                  ; DE = table entry pointer
+    pop bc                  ; B=logical X, C=logical Y
+    ; --- Top row ---
+    push bc                 ; save position
+    ld a,c
+    add a,a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a                  ; B=hw_x, C=hw_y
+    di
+    call _wt16_addr         ; set VRAM address (clobbers HL,BC; DE safe)
+    ld a,(de)
+    out ($be),a
+    inc de                  ; TL tile
+    ld a,(de)
+    out ($be),a
+    inc de                  ; TL attr
+    ld a,(de)
+    out ($be),a
+    inc de                  ; TR tile
+    ld a,(de)
+    out ($be),a
+    inc de                  ; TR attr
+    ei
+    ; --- Bottom row ---
+    pop bc                  ; B=logical X, C=logical Y
+    ld a,c
+    add a,a
+    inc a
+    ld c,a                  ; hw_y = Y*2 + 1
+    ld a,b
+    add a,a
+    ld b,a                  ; hw_x = X*2
+    di
+    call _wt16_addr
+    ld a,(de)
+    out ($be),a
+    inc de                  ; BL tile
+    ld a,(de)
+    out ($be),a
+    inc de                  ; BL attr
+    ld a,(de)
+    out ($be),a
+    inc de                  ; BR tile
+    ld a,(de)
+    out ($be),a             ; BR attr
+    ei
+    ret
+
+;--------------------------------------------------------------
 ; RenderFullMap - write entire MapBuffer as 16x16 bg tiles
 ; Call with display OFF
 ;--------------------------------------------------------------
@@ -249,6 +340,20 @@ _rfm_xloop:
     push de
     call GetMapTile         ; A = ASCII char
     pop de
+    cp '#'
+    jr nz,_rfm_notWall
+    ; Wall: contextual dirt tile
+    push de
+    call GetWallNeighborMask ; A = 4-bit mask, D=X E=Y preserved on stack
+    pop de
+    push de
+    ld b,d
+    ld c,e
+    call WriteWallTile16    ; B=X, C=Y, A=mask
+    pop de
+    inc d
+    jr _rfm_xloop
+_rfm_notWall:
     push de
     ld b,d
     ld c,e

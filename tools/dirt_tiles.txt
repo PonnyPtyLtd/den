@@ -1,0 +1,83 @@
+; Dirt/burrow wall tiles for contextual rendering
+; Palette 0: 0=black 2=warm brown 3=dark brick 4=bright tan
+;   B=dark brown(shadow) C=warm brown(alt) D=golden brown E=dark green
+
+; Interior dirt - no exposed edges
+@DirtSolidData
+32232322
+23322232
+22232322
+32322223
+22232232
+23222322
+32232232
+22322322
+
+; Interior dirt variant (different texture pattern)
+@DirtSolidV2Data
+22322232
+32232322
+23222232
+22323222
+32222322
+22232232
+32322232
+22232322
+
+; Top edge exposed to floor (floor is ABOVE)
+; Rows 0-2: transition from open to dirt, row 3+: solid dirt
+@DirtEdgeTData
+00000000
+000E0B00
+0B322B00
+B2322320
+32232322
+22322232
+32232322
+23222322
+
+; Top edge variant (for TR quadrant)
+@DirtEdgeT2Data
+00000000
+00B00E00
+00B232B0
+02322320
+22322232
+32232322
+22322232
+32232322
+
+; Left edge exposed to floor (floor is to the LEFT)
+; Left cols: transition from open to dirt
+@DirtEdgeLData
+00B32232
+0B232322
+00322232
+0B232322
+00B22322
+00232232
+0B322322
+00232322
+
+; Left edge variant (for BL quadrant)
+@DirtEdgeL2Data
+0B232322
+00B22232
+00232322
+0B322232
+00232322
+0B232232
+00B32322
+00232232
+
+; Corner: floor ABOVE and to the LEFT
+; Top-left is open, bottom-right is dirt. Diagonal transition.
+@DirtCornerTLData
+00000000
+0000000E
+00000B30
+000B2D20
+00B32232
+0B222322
+B3232232
+23222322
