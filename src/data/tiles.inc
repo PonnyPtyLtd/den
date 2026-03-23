@@ -593,12 +593,6 @@ GreebleRoot3Data:
 .db $92,$ff,$00,$00
 .db $24,$ff,$00,$00
 
-; Greeble tile lookup (7 entries, indexed by greeble index 0-6)
-GreebleTileTable:
-.db BG_GREEBLE_CRACK, BG_GREEBLE_BONE, BG_GREEBLE_SKULL
-.db BG_GREEBLE_MOLE, BG_GREEBLE_ROOT1, BG_GREEBLE_ROOT2
-.db BG_GREEBLE_ROOT3
-
 ; === HEART TILES (palette 0) - HP display in 1/4 increments ===
 ; Color 15 = red (fill), color 11 = dark brown (outline)
 .define BG_HEART_FULL  145
@@ -657,11 +651,19 @@ HeartEmptyData:
 .db $28,$38,$00,$38
 .db $10,$10,$00,$10
 
+BgTileCount = 55
+
+; === LOOKUP TABLES (must be AFTER all tile data / BgTileCount) ===
+
+; Greeble tile lookup (7 entries, indexed by greeble index 0-6)
+GreebleTileTable:
+.db BG_GREEBLE_CRACK, BG_GREEBLE_BONE, BG_GREEBLE_SKULL
+.db BG_GREEBLE_MOLE, BG_GREEBLE_ROOT1, BG_GREEBLE_ROOT2
+.db BG_GREEBLE_ROOT3
+
 ; Heart tile lookup (indexed by quarter-fill 0-4)
 HeartTileTable:
 .db BG_HEART_EMPTY, BG_HEART_14, BG_HEART_HALF, BG_HEART_34, BG_HEART_FULL
-
-BgTileCount = 55
 
 ; Neighbor mask lookup table for contextual wall tiles
 ; 4-bit mask: bit3=up open, bit2=right open, bit1=down open, bit0=left open
@@ -701,7 +703,6 @@ WallQuadrantTable:
 ; Mask 15 (1111): all open
 .db BG_DIRT_CORNER, $00, BG_DIRT_CORNER, $02, BG_DIRT_CORNER, $04, BG_DIRT_CORNER, $06
 
-; (BgTileCount defined above with greebles = 50)
 
 ;==============================================================
 ; SPRITE TILES - cute cartoony characters filling 14x14 space
