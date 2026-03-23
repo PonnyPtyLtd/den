@@ -7,8 +7,8 @@
 TILES_FILE = File.join(__dir__, '..', 'src', 'data', 'tiles.inc')
 FONT_FILE = File.join(__dir__, '..', 'src', 'data', 'font.inc')
 VDP_FILE = File.join(__dir__, '..', 'src', 'vdp.inc')
-SCALE = 4
-MARGIN = 2
+SCALE = 1
+MARGIN = 1
 
 # Simple BMP reader (24-bit uncompressed only)
 class BMPReader
@@ -21,16 +21,17 @@ class BMPReader
     @width = data[18..21].unpack1('l<')
     @height = data[22..25].unpack1('l<').abs
     bpp = data[28..29].unpack1('v')
-    raise "Only 24-bit BMP supported (got #{bpp})" unless bpp == 24
+    raise "Only 24/32-bit BMP supported (got #{bpp})" unless [24, 32].include?(bpp)
+    bytes_per_pixel = bpp / 8
     bottom_up = data[22..25].unpack1('l<') > 0
-    row_bytes = @width * 3
+    row_bytes = @width * bytes_per_pixel
     row_pad = (4 - row_bytes % 4) % 4
     @pixels = Array.new(@height) { Array.new(@width, [0, 0, 0]) }
     @height.times do |y|
       src_y = bottom_up ? (@height - 1 - y) : y
       row_offset = offset + src_y * (row_bytes + row_pad)
       @width.times do |x|
-        i = row_offset + x * 3
+        i = row_offset + x * bytes_per_pixel
         b, g, r = data[i].ord, data[i + 1].ord, data[i + 2].ord
         @pixels[y][x] = [r, g, b]
       end

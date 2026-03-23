@@ -6,8 +6,8 @@
 
 TILES_FILE = File.join(__dir__, '..', 'src', 'data', 'tiles.inc')
 VDP_FILE = File.join(__dir__, '..', 'src', 'vdp.inc')
-SCALE = 4
-MARGIN = 2
+SCALE = 1
+MARGIN = 1
 
 # Simple BMP writer (24-bit, no compression, no dependencies)
 class BMPWriter
