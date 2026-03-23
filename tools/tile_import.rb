@@ -1,16 +1,18 @@
 #!/usr/bin/env ruby
-# Imports tile data from a BMP image back into tiles.inc
-# The BMP must match the layout produced by tile_export.rb
-# Usage: ruby tools/tile_import.rb input.bmp
+# Imports tile data from BMP images back into tiles.inc and font.inc
+# BMPs must match the layout produced by tile_export.rb
+# Usage: ruby tools/tile_import.rb [bg_tiles.bmp] [sprites.bmp] [font.bmp]
+# Any argument can be omitted or set to "-" to skip that import.
 
 TILES_FILE = File.join(__dir__, '..', 'src', 'data', 'tiles.inc')
+FONT_FILE = File.join(__dir__, '..', 'src', 'data', 'font.inc')
 VDP_FILE = File.join(__dir__, '..', 'src', 'vdp.inc')
 SCALE = 4
 MARGIN = 2
 
 # Simple BMP reader (24-bit uncompressed only)
 class BMPReader
-  attr_reader :width, :height, :pixels
+  attr_reader :width, :height
 
   def initialize(path)
     data = File.binread(path)
@@ -81,6 +83,15 @@ def encode_tile(pixels)
   bytes
 end
 
+# Read an 8x8 tile from BMP at scaled position, map to palette indices
+def read_tile(bmp, palette_rgb, x, y)
+  Array.new(8) { |py| Array.new(8) { |px|
+    r, g, b = bmp.get(x + px * SCALE + SCALE / 2, y + py * SCALE + SCALE / 2)
+    nearest_color(r, g, b, palette_rgb)
+  }}
+end
+
+# Parse tile data blocks from an .inc file, tracking .db line positions
 def parse_tile_blocks(file)
   blocks = []
   current_label = nil
@@ -98,13 +109,16 @@ def parse_tile_blocks(file)
       db_lines = []
     end
     if stripped =~ /^\.db\s+(.+)/
-      db_lines << idx
       data_part = $1.sub(/;.*/, '').strip
-      bs = data_part.split(',').map { |b|
-        b = b.strip
-        b.start_with?('$') ? b[1..].to_i(16) : (b =~ /^\d+$/ ? b.to_i : nil)
-      }.compact
-      current_bytes.concat(bs)
+      tokens = data_part.split(',').map(&:strip)
+      # Only include lines where all values are numeric hex/dec (skip symbolic constants)
+      if tokens.all? { |b| b =~ /^\$[0-9a-fA-F]+$/ || b =~ /^\d+$/ }
+        db_lines << idx
+        bs = tokens.map { |b|
+          b.start_with?('$') ? b[1..].to_i(16) : b.to_i
+        }
+        current_bytes.concat(bs)
+      end
     end
   end
   if current_label && current_bytes.length >= 32
@@ -113,60 +127,8 @@ def parse_tile_blocks(file)
   [lines, blocks]
 end
 
-# Main
-input_file = ARGV[0] || abort("Usage: ruby tools/tile_import.rb <input.bmp>")
-bmp = BMPReader.new(input_file)
-palettes = parse_palette(VDP_FILE)
-pal0 = palettes[0].map { |c| sms_to_rgb(c) }
-pal1 = palettes[1].map { |c| sms_to_rgb(c) }
-lines, blocks = parse_tile_blocks(TILES_FILE)
-
-bg_pat = /Wall|Floor|Stair|Root|Icon/i
-bg_blocks = blocks.select { |t| t[:label] =~ bg_pat }
-spr_blocks = blocks.reject { |t| t[:label] =~ bg_pat }
-ordered = bg_blocks + spr_blocks
-
-y = MARGIN
-changes = 0
-
-ordered.each do |block|
-  is_bg = block[:label] =~ bg_pat
-  pal = is_bg ? pal0 : pal1
-
-  if is_bg
-    n = block[:bytes].length / 32
-    new_bytes = []
-    n.times do |i|
-      ox = MARGIN + i * (8 * SCALE + MARGIN)
-      pixels = Array.new(8) { |py| Array.new(8) { |px|
-        r, g, b = bmp.get(ox + px * SCALE + SCALE / 2, y + py * SCALE + SCALE / 2)
-        nearest_color(r, g, b, pal)
-      }}
-      new_bytes.concat(encode_tile(pixels))
-    end
-    y += 8 * SCALE + MARGIN
-  else
-    n = block[:bytes].length / 128
-    new_bytes = []
-    n.times do |i|
-      ox = MARGIN + i * (16 * SCALE + MARGIN * 2)
-      full = Array.new(16) { |py| Array.new(16) { |px|
-        r, g, b = bmp.get(ox + px * SCALE + SCALE / 2, y + py * SCALE + SCALE / 2)
-        ci = nearest_color(r, g, b, pal)
-        ci = 0 if r < 40 && g < 40 && b < 40  # dark = transparent
-        ci
-      }}
-      tl = full[0..7].map { |r| r[0..7] }
-      bl = full[8..15].map { |r| r[0..7] }
-      tr = full[0..7].map { |r| r[8..15] }
-      br = full[8..15].map { |r| r[8..15] }
-      [tl, bl, tr, br].each { |t| new_bytes.concat(encode_tile(t)) }
-    end
-    y += 16 * SCALE + MARGIN
-  end
-
-  next unless new_bytes.length == block[:bytes].length
-
+# Replace .db lines in the lines array with new encoded bytes
+def replace_db_lines(lines, block, new_bytes)
   byte_idx = 0
   block[:db_lines].each do |li|
     orig = lines[li]
@@ -178,8 +140,171 @@ ordered.each do |block|
     lines[li] = "#{indent}.db #{hex.join(',')}#{comment}\n"
     byte_idx += n_in_line
   end
-  changes += 1
 end
 
-File.write(TILES_FILE, lines.join)
-puts "Imported #{changes} tile blocks from #{input_file}"
+# --- Import BG tiles ---
+def import_bg(bmp_path, palette_rgb, tiles_file)
+  return 0 unless bmp_path && bmp_path != "-" && File.exist?(bmp_path)
+  bmp = BMPReader.new(bmp_path)
+  lines, blocks = parse_tile_blocks(tiles_file)
+
+  bg_blocks = blocks.reject { |t| t[:label] =~ /Spr/i }
+  cols = 8
+  tile_px = 8 * SCALE + MARGIN
+
+  changes = 0
+  idx = 0
+  bg_blocks.each do |block|
+    n = block[:bytes].length / 32
+    new_bytes = []
+    n.times do |i|
+      col = idx % cols
+      row = idx / cols
+      ox = MARGIN + col * tile_px
+      oy = MARGIN + row * tile_px
+      pixels = read_tile(bmp, palette_rgb, ox, oy)
+      new_bytes.concat(encode_tile(pixels))
+      idx += 1
+    end
+    if new_bytes.length == block[:bytes].length
+      replace_db_lines(lines, block, new_bytes)
+      changes += 1
+    end
+  end
+
+  File.write(tiles_file, lines.join)
+  puts "Imported #{changes} BG tile blocks from #{bmp_path}"
+  changes
+end
+
+# --- Import sprites ---
+def import_sprites(bmp_path, palette_rgb, tiles_file)
+  return 0 unless bmp_path && bmp_path != "-" && File.exist?(bmp_path)
+  bmp = BMPReader.new(bmp_path)
+  lines, blocks = parse_tile_blocks(tiles_file)
+
+  spr_blocks = blocks.select { |t| t[:label] =~ /Spr/i }
+  cols = 6
+  spr_px = 16 * SCALE + MARGIN * 2
+
+  # For sprites, dark pixels (< 40 per channel) map to color 0 (transparent)
+  # This matches the dark grey background used in export
+  spr_palette = palette_rgb.dup
+
+  changes = 0
+  idx = 0
+  spr_blocks.each do |block|
+    n = block[:bytes].length / 128
+    new_bytes = []
+    n.times do |i|
+      col = idx % cols
+      row = idx / cols
+      ox = MARGIN + col * spr_px
+      oy = MARGIN + row * spr_px
+      # Read 16x16 sprite as 4 quadrants
+      full = Array.new(16) { |py| Array.new(16) { |px|
+        r, g, b = bmp.get(ox + px * SCALE + SCALE / 2, oy + py * SCALE + SCALE / 2)
+        ci = nearest_color(r, g, b, spr_palette)
+        ci = 0 if r < 48 && g < 48 && b < 48  # dark grey bg = transparent
+        ci
+      }}
+      tl = full[0..7].map { |r| r[0..7] }
+      bl = full[8..15].map { |r| r[0..7] }
+      tr = full[0..7].map { |r| r[8..15] }
+      br = full[8..15].map { |r| r[8..15] }
+      [tl, bl, tr, br].each { |t| new_bytes.concat(encode_tile(t)) }
+      idx += 1
+    end
+    if new_bytes.length == block[:bytes].length
+      replace_db_lines(lines, block, new_bytes)
+      changes += 1
+    end
+  end
+
+  File.write(tiles_file, lines.join)
+  puts "Imported #{changes} sprite blocks from #{bmp_path}"
+  changes
+end
+
+# --- Import font ---
+def import_font(bmp_path, palette_rgb, font_file)
+  return 0 unless bmp_path && bmp_path != "-" && File.exist?(bmp_path)
+  bmp = BMPReader.new(bmp_path)
+
+  # Font is a single contiguous block of .db lines under FontData:
+  lines = File.readlines(font_file)
+  db_lines = []
+  all_bytes = []
+  in_font = false
+
+  lines.each_with_index do |line, idx|
+    stripped = line.strip
+    if stripped =~ /^FontData:/
+      in_font = true
+      next
+    end
+    if stripped =~ /^FontDataEnd:/ || (in_font && stripped =~ /^\w+:/ && stripped !~ /^\.db/)
+      break
+    end
+    if in_font && stripped =~ /^\.db\s+(.+)/
+      db_lines << idx
+      data_part = $1.sub(/;.*/, '').strip
+      bs = data_part.split(',').map { |b|
+        b = b.strip
+        b.start_with?('$') ? b[1..].to_i(16) : (b =~ /^\d+$/ ? b.to_i : nil)
+      }.compact
+      all_bytes.concat(bs)
+    end
+  end
+
+  num_chars = all_bytes.length / 32
+  cols = 16
+  tile_px = 8 * SCALE + MARGIN
+  label_h = 12
+  cell_h = 8 * SCALE + label_h + MARGIN
+
+  new_bytes = []
+  num_chars.times do |i|
+    col = i % cols
+    row = i / cols
+    ox = MARGIN + col * tile_px
+    oy = MARGIN + row * cell_h
+    pixels = read_tile(bmp, palette_rgb, ox, oy)
+    new_bytes.concat(encode_tile(pixels))
+  end
+
+  return 0 unless new_bytes.length == all_bytes.length
+
+  # Replace .db lines
+  byte_idx = 0
+  db_lines.each do |li|
+    orig = lines[li]
+    n_in_line = orig.sub(/^.*\.db\s+/, '').sub(/;.*/, '').strip
+                    .split(',').count { |b| b.strip =~ /^\$?[0-9a-fA-F]+$/ }
+    indent = orig[/^\s*/]
+    hex = new_bytes[byte_idx, n_in_line].map { |b| "$%02x" % b }
+    lines[li] = "#{indent}.db #{hex.join(',')}\n"
+    byte_idx += n_in_line
+  end
+
+  File.write(font_file, lines.join)
+  puts "Imported #{num_chars} font chars from #{bmp_path}"
+  1
+end
+
+# Main
+bg_input = ARGV[0] || 'bg_tiles.bmp'
+spr_input = ARGV[1] || 'sprites.bmp'
+font_input = ARGV[2] || 'font.bmp'
+
+palettes = parse_palette(VDP_FILE)
+pal0 = palettes[0].map { |c| sms_to_rgb(c) }
+pal1 = palettes[1].map { |c| sms_to_rgb(c) }
+
+total = 0
+total += import_bg(bg_input, pal0, TILES_FILE)
+total += import_sprites(spr_input, pal1, TILES_FILE)
+total += import_font(font_input, pal0, FONT_FILE)
+
+puts "Done. #{total} blocks updated." if total > 0
+puts "No changes." if total == 0

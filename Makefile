@@ -47,9 +47,8 @@ tiles-export:
 	ruby tools/tile_export.rb bg_tiles.bmp sprites.bmp font.bmp
 	@echo "Exported bg_tiles.bmp (pal 0), sprites.bmp (pal 1), font.bmp (pal 0)"
 
-# Import edited tiles back from BMP
+# Import edited tiles back from BMPs
 tiles-import:
-	ruby tools/tile_import.rb tiles_export.bmp
-	@echo "Imported from tiles_export.bmp"
+	ruby tools/tile_import.rb bg_tiles.bmp sprites.bmp font.bmp
 
 .PHONY: all clean run tiles-export tiles-import
