@@ -408,14 +408,7 @@ _inv_divDone:
     ld b,16
     ld c,14
     call _invPrintNum
-    ld b,21
-    ld c,14
-    ld hl,_invHPLabel
-    call PrintString
-    ld a,(PlayerMaxHP)
-    ld b,25
-    ld c,14
-    call _invPrintNum
+    ; (MHP removed - hearts show max HP visually)
     ; Draw cursor
     call DrawInvCursor
     call DisplayOn
@@ -666,7 +659,6 @@ ItemSprBaseTable:
 
 _invAtkLabel: .db "ATK:",0
 _invDefLabel: .db "DEF:",0
-_invHPLabel:  .db "MHP:",0
 
 ; Print 2-digit number at position B,C
 ; A = number (0-99), B = column, C = row
