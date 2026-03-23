@@ -149,6 +149,9 @@ BfsHead db
 BfsTail db
 WandAiming db           ; nonzero = waiting for direction to fire wand
 EnemyProcMask db        ; bitmask for enemy processing order
+; Greeble decorations (max 14 = 7 types × 2 each)
+GreebleData dsb 42      ; 14 slots × 3 bytes (X, Y, tile index)
+NumGreebles db
 .ends
 
 ; Turn phases (extended)

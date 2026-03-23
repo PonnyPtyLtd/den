@@ -8,6 +8,7 @@ GenerateDungeon:
     call ConnectRooms
     call PlaceStairs
     call PlacePlayer
+    call PlaceGreebles
     ret
 
 ;--------------------------------------------------------------
@@ -243,4 +244,173 @@ PlacePlayer:
     srl c
     add a,c
     ld (PlayerY),a
+    ret
+
+;--------------------------------------------------------------
+; PlaceGreebles - scatter decorative details on interior walls
+; Max 2 of each type, 1/3 chance of 0/1/2 per type
+;--------------------------------------------------------------
+PlaceGreebles:
+    xor a
+    ld (NumGreebles),a
+    ld c,0                  ; C = type index (0-6)
+_pgr_typeLoop:
+    ld a,c
+    cp 7
+    ret z
+    ; Look up tile for this type
+    push bc
+    ld b,0
+    ld hl,GreebleTileTable
+    add hl,bc
+    ld b,(hl)               ; B = greeble tile index
+    ; Roll count: 0, 1, or 2
+    push bc
+    ld a,3
+    call GetRandomRange      ; A = 0, 1, or 2
+    pop bc                   ; B = tile
+    or a
+    jr z,_pgr_typeNext
+_pgr_countLoop:
+    push af                  ; save remaining count
+    push bc                  ; save B=tile, C=type
+    ld a,b
+    call _pgr_tryPlace
+    pop bc
+    pop af
+    dec a
+    jr nz,_pgr_countLoop
+_pgr_typeNext:
+    pop bc
+    inc c
+    jr _pgr_typeLoop
+
+; Try to place one greeble. A = tile index. 20 retries.
+_pgr_tryPlace:
+    push af                  ; save tile on stack
+    ld e,20
+_pgr_retry:
+    push de
+    ; Random position (avoid borders)
+    ld a,MAP_WIDTH-2
+    call GetRandomRange
+    inc a
+    ld d,a                   ; D = X (1..14)
+    ld a,MAP_HEIGHT-2
+    call GetRandomRange
+    inc a
+    ld e,a                   ; E = Y (1..9)
+    ; Check center is wall
+    ld b,d
+    ld c,e
+    push de
+    call GetMapTile
+    pop de
+    cp '#'
+    jr nz,_pgr_miss
+    ; Check up
+    ld b,d
+    ld a,e
+    dec a
+    ld c,a
+    push de
+    call GetMapTile
+    pop de
+    cp '#'
+    jr nz,_pgr_miss
+    ; Check down
+    ld b,d
+    ld a,e
+    inc a
+    ld c,a
+    push de
+    call GetMapTile
+    pop de
+    cp '#'
+    jr nz,_pgr_miss
+    ; Check left
+    ld a,d
+    dec a
+    ld b,a
+    ld c,e
+    push de
+    call GetMapTile
+    pop de
+    cp '#'
+    jr nz,_pgr_miss
+    ; Check right
+    ld a,d
+    inc a
+    ld b,a
+    ld c,e
+    push de
+    call GetMapTile
+    pop de
+    cp '#'
+    jr nz,_pgr_miss
+    ; Check not already greebled
+    ld b,d
+    ld c,e
+    push de
+    call CheckGreeble
+    pop de
+    or a
+    jr nz,_pgr_miss
+    ; Success! Store greeble.
+    pop bc                   ; discard retry counter
+    ld a,(NumGreebles)
+    cp 14
+    jr nc,_pgr_full
+    ; GreebleData + count*3
+    ld c,a
+    add a,a
+    add a,c                  ; A = count * 3
+    ld c,a
+    ld b,0
+    ld hl,GreebleData
+    add hl,bc
+    ld (hl),d                ; X
+    inc hl
+    ld (hl),e                ; Y
+    inc hl
+    pop af                   ; tile index
+    ld (hl),a
+    ld a,(NumGreebles)
+    inc a
+    ld (NumGreebles),a
+    ret
+_pgr_miss:
+    pop de
+    dec e
+    jr nz,_pgr_retry
+_pgr_full:
+    pop af                   ; clean tile from stack
+    ret
+
+; Check if position B,C has a greeble. A=tile if found, 0 if not.
+CheckGreeble:
+    ld a,(NumGreebles)
+    or a
+    ret z
+    ld d,a
+    ld hl,GreebleData
+_cg_loop:
+    ld a,(hl)
+    cp b
+    jr nz,_cg_skip
+    inc hl
+    ld a,(hl)
+    cp c
+    jr nz,_cg_skip2
+    inc hl
+    ld a,(hl)               ; found - return tile
+    ret
+_cg_skip:
+    inc hl
+_cg_skip2:
+    inc hl
+    inc hl
+    dec d
+    jr nz,_cg_loop
+    xor a                    ; not found
     ret

@@ -276,8 +276,8 @@ CloseMenu:
 DrawInventory:
     call DisplayOff
     call ClearNameTable
-    ; Use priority so PC sprite doesn't show through
-    ld a,1
+    ; No priority - sprites will show through black interior
+    xor a
     ld (BorderPriority),a
     ; Main border
     ld b,1
@@ -286,7 +286,12 @@ DrawInventory:
     ld e,16
     call DrawRootBorder
     ; Divider: stats section at bottom (rows 14-15 inside border)
-    ; Draw a horizontal root bar at row 13 across the interior
+    ; Left T-junction at (1, 13)
+    ld b,1
+    ld c,13
+    ld a,BG_ROOT_TL
+    call _drb_writeTile
+    ; Horizontal bar across interior (cols 2-29)
     ld b,2
     ld c,13
     ld d,28
@@ -304,62 +309,86 @@ _inv_divLoop:
     dec d
     jr _inv_divLoop
 _inv_divDone:
-    ; No sprites needed (icons via bg tiles would need new tiles, skip for now)
+    ; Right T-junction at (30, 13)
+    ld b,30
+    ld c,13
+    ld a,BG_ROOT_TR
+    call _drb_writeTile
+    ; Build item sprites
     xor a
     ld (NumSprites),a
-    ; Inventory slots - labels at col 3, names at col 12
+    ld a,(InvLeftHand)
+    ld e,8                  ; pixel Y for row 1
+    call _invShowItemSprite
+    ld a,(InvRightHand)
+    ld e,24                 ; row 3
+    call _invShowItemSprite
+    ld a,(InvBody)
+    ld e,40                 ; row 5
+    call _invShowItemSprite
+    ld a,(InvHead)
+    ld e,56                 ; row 7
+    call _invShowItemSprite
+    ld a,(InvPocket1)
+    ld e,72                 ; row 9
+    call _invShowItemSprite
+    ld a,(InvPocket2)
+    ld e,88                 ; row 11
+    call _invShowItemSprite
+    ; Inventory slots - labels at col 6, names at col 15
+    ; Sprites at col 3-4 (pixel 24), labels shifted right to clear
     ; Row 1: Weapon
-    ld b,3
+    ld b,6
     ld c,1
     ld hl,LeftHandString
     call PrintString
     ld a,(InvLeftHand)
-    ld b,12
+    ld b,15
     ld c,1
     call PrintItemName
     ; Row 3: Shield
-    ld b,3
+    ld b,6
     ld c,3
     ld hl,RightHandString
     call PrintString
     ld a,(InvRightHand)
-    ld b,12
+    ld b,15
     ld c,3
     call PrintItemName
     ; Row 5: Armor
-    ld b,3
+    ld b,6
     ld c,5
     ld hl,BodyString
     call PrintString
     ld a,(InvBody)
-    ld b,12
+    ld b,15
     ld c,5
     call PrintItemName
     ; Row 7: Head
-    ld b,3
+    ld b,6
     ld c,7
     ld hl,HeadString
     call PrintString
     ld a,(InvHead)
-    ld b,12
+    ld b,15
     ld c,7
     call PrintItemName
     ; Row 9: Pocket 1
-    ld b,3
+    ld b,6
     ld c,9
     ld hl,Pocket1String
     call PrintString
     ld a,(InvPocket1)
-    ld b,12
+    ld b,15
     ld c,9
     call PrintItemName
     ; Row 11: Pocket 2
-    ld b,3
+    ld b,6
     ld c,11
     ld hl,Pocket2String
     call PrintString
     ld a,(InvPocket2)
-    ld b,12
+    ld b,15
     ld c,11
     call PrintItemName
     ; Stats below divider
@@ -392,7 +421,7 @@ _inv_divDone:
     call DisplayOn
     ret
 
-; Show item sprite icon at pixel (0, E) if item type A is non-zero
+; Show item sprite icon at pixel (24, E) if item type A is non-zero
 _invShowItemSprite:
     or a
     ret z                   ; empty slot, no sprite
@@ -402,7 +431,7 @@ _invShowItemSprite:
     ld b,0
     add hl,bc
     ld c,(hl)               ; C = sprite base
-    ld d,0                  ; pixel X = 0
+    ld d,24                 ; pixel X = col 3, right of cursor
     jp AddSprite16Simple    ; tail call
 
 ;--------------------------------------------------------------
@@ -670,6 +699,8 @@ _ipn_done:
     ret
 
 PrintItemName:
+    or a
+    ret z                   ; empty slot - leave blank
     push bc
     add a,a
     ld c,a
@@ -687,28 +718,28 @@ PrintItemName:
 ; DrawInvCursor
 ;--------------------------------------------------------------
 DrawInvCursor:
-    ; Clear cursors at col 3, rows 1,3,5,7,9,11
-    ld b,3
+    ; Clear cursors at col 5, rows 1,3,5,7,9,11
+    ld b,5
     ld c,1
     ld a,' '
     call _writeChar8
-    ld b,3
+    ld b,5
     ld c,3
     ld a,' '
     call _writeChar8
-    ld b,3
+    ld b,5
     ld c,5
     ld a,' '
     call _writeChar8
-    ld b,3
+    ld b,5
     ld c,7
     ld a,' '
     call _writeChar8
-    ld b,3
+    ld b,5
     ld c,9
     ld a,' '
     call _writeChar8
-    ld b,3
+    ld b,5
     ld c,11
     ld a,' '
     call _writeChar8
@@ -719,7 +750,7 @@ DrawInvCursor:
     ld b,0
     add hl,bc
     ld c,(hl)
-    ld b,3
+    ld b,5
     ld a,'>'
     call _writeChar8
     ; Draw sub-menu if active
@@ -745,12 +776,12 @@ DrawInvCursor:
     ld a,(InvSubMenu)
     cp 1
     jr nz,+
-    ld b,14
+    ld b,17
     ld hl,EquipString
     call PrintString
     jr _dic_opt2
 +:
-    ld b,14
+    ld b,17
     ld hl,_dimEquip
     call PrintString
     jr _dic_opt2
@@ -759,12 +790,12 @@ _dic_opt1_use:
     ld a,(InvSubMenu)
     cp 1
     jr nz,+
-    ld b,14
+    ld b,17
     ld hl,UseString
     call PrintString
     jr _dic_opt2
 +:
-    ld b,14
+    ld b,17
     ld hl,_dimUse
     call PrintString
 _dic_opt2:
@@ -775,12 +806,12 @@ _dic_opt2:
     ld a,(InvSubMenu)
     cp 2
     jr nz,+
-    ld b,14
+    ld b,17
     ld hl,DropString
     call PrintString
     jr _dic_done
 +:
-    ld b,14
+    ld b,17
     ld hl,_dimDrop
     call PrintString
 _dic_done:

@@ -259,6 +259,95 @@ _gnm_noLeft:
 ; Uses DE to carry table pointer across _wt16_addr calls
 ;--------------------------------------------------------------
 WriteWallTile16:
+    ; A = neighbor mask, B = logical X, C = logical Y
+    or a
+    jp nz,_wwt_lookup       ; non-zero mask → use lookup table
+    ; ---- Fully interior wall: check greeble buffer ----
+    call CheckGreeble       ; B,C preserved; A = tile or 0
+    or a
+    jr z,_wwt_plain         ; no greeble → plain interior
+    ; A = greeble tile. Place in one quadrant.
+    ld d,a                  ; D = greeble tile
+    ld a,b
+    xor c
+    and $03
+    ld e,a                  ; E = quadrant (0=TL,1=TR,2=BL,3=BR)
+    ; --- Write top row ---
+    push bc
+    ld a,c
+    add a,a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a
+    di
+    call _wt16_addr         ; DE preserved
+    ; TL
+    ld a,e
+    or a
+    jr nz,_wg_tl_s
+    ld a,d
+    jr _wg_tl_w
+_wg_tl_s:
+    ld a,BG_DIRT_SOLID
+_wg_tl_w:
+    out ($be),a
+    xor a
+    out ($be),a
+    ; TR
+    ld a,e
+    dec a
+    jr nz,_wg_tr_s
+    ld a,d
+    jr _wg_tr_w
+_wg_tr_s:
+    ld a,BG_DIRT_SOLID_V
+_wg_tr_w:
+    out ($be),a
+    xor a
+    out ($be),a
+    ei
+    ; --- Write bottom row ---
+    pop bc
+    ld a,c
+    add a,a
+    inc a
+    ld c,a
+    ld a,b
+    add a,a
+    ld b,a
+    di
+    call _wt16_addr
+    ; BL
+    ld a,e
+    cp 2
+    jr nz,_wg_bl_s
+    ld a,d
+    jr _wg_bl_w
+_wg_bl_s:
+    ld a,BG_DIRT_SOLID_V
+_wg_bl_w:
+    out ($be),a
+    xor a
+    out ($be),a
+    ; BR
+    ld a,e
+    cp 3
+    jr nz,_wg_br_s
+    ld a,d
+    jr _wg_br_w
+_wg_br_s:
+    ld a,BG_DIRT_SOLID
+_wg_br_w:
+    out ($be),a
+    xor a
+    out ($be),a
+    ei
+    ret
+
+_wwt_plain:
+    xor a                   ; restore mask = 0
+_wwt_lookup:
     ; Compute table pointer: DE = WallQuadrantTable + mask*8
     push bc                 ; save position
     add a,a

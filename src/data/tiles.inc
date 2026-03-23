@@ -514,6 +514,93 @@ DirtCornerTLData:
 .db $e4,$ff,$00,$a0
 .db $d2,$ff,$00,$00
 
+; === GREEBLE TILES (palette 0) - decorative details for interior walls ===
+.define BG_GREEBLE_CRACK 138
+.define BG_GREEBLE_BONE  139
+.define BG_GREEBLE_SKULL 140
+.define BG_GREEBLE_MOLE  141
+.define BG_GREEBLE_ROOT1 142
+.define BG_GREEBLE_ROOT2 143
+.define BG_GREEBLE_ROOT3 144
+
+GreebleCrackData:
+.db $94,$bf,$00,$00
+.db $52,$df,$00,$00
+.db $24,$ef,$00,$00
+.db $90,$f7,$00,$00
+.db $08,$fb,$00,$00
+.db $44,$fd,$00,$00
+.db $92,$fe,$00,$00
+.db $25,$ff,$00,$00
+
+GreebleBoneData:
+.db $94,$ff,$00,$00
+.db $62,$ff,$00,$00
+.db $00,$db,$24,$00
+.db $82,$e7,$18,$00
+.db $82,$e7,$18,$00
+.db $00,$db,$24,$00
+.db $92,$ff,$00,$00
+.db $24,$ff,$00,$00
+
+GreebleSkullData:
+.db $94,$ff,$00,$00
+.db $42,$cf,$30,$00
+.db $02,$87,$48,$00
+.db $02,$87,$78,$00
+.db $00,$c7,$10,$00
+.db $44,$cf,$30,$00
+.db $92,$ff,$00,$00
+.db $24,$ff,$00,$00
+
+GreebleMoleData:
+.db $94,$ff,$00,$00
+.db $62,$ff,$00,$00
+.db $0c,$ff,$30,$00
+.db $82,$ef,$6c,$00
+.db $12,$ff,$68,$00
+.db $0c,$ff,$30,$00
+.db $92,$ff,$00,$00
+.db $24,$ff,$00,$00
+
+GreebleRoot1Data:
+.db $90,$ff,$04,$04
+.db $62,$ff,$04,$04
+.db $14,$ff,$08,$08
+.db $91,$ff,$20,$20
+.db $12,$ff,$40,$40
+.db $44,$ff,$80,$80
+.db $92,$ff,$00,$00
+.db $24,$ff,$00,$00
+
+GreebleRoot2Data:
+.db $14,$ff,$80,$80
+.db $22,$ff,$40,$40
+.db $14,$ff,$20,$20
+.db $81,$ff,$10,$10
+.db $02,$ff,$08,$08
+.db $40,$ff,$04,$04
+.db $92,$ff,$00,$00
+.db $24,$ff,$00,$00
+
+GreebleRoot3Data:
+.db $10,$ff,$84,$84
+.db $22,$ff,$48,$48
+.db $04,$ff,$30,$30
+.db $81,$ff,$10,$10
+.db $02,$ff,$10,$10
+.db $44,$ff,$00,$00
+.db $92,$ff,$00,$00
+.db $24,$ff,$00,$00
+
+; Greeble tile lookup (7 entries, indexed by greeble index 0-6)
+GreebleTileTable:
+.db BG_GREEBLE_CRACK, BG_GREEBLE_BONE, BG_GREEBLE_SKULL
+.db BG_GREEBLE_MOLE, BG_GREEBLE_ROOT1, BG_GREEBLE_ROOT2
+.db BG_GREEBLE_ROOT3
+
+BgTileCount = 50
+
 ; Neighbor mask lookup table for contextual wall tiles
 ; 4-bit mask: bit3=up open, bit2=right open, bit1=down open, bit0=left open
 ; Each entry: TL_tile, TL_attr, TR_tile, TR_attr, BL_tile, BL_attr, BR_tile, BR_attr
@@ -552,7 +639,7 @@ WallQuadrantTable:
 ; Mask 15 (1111): all open
 .db BG_DIRT_CORNER, $00, BG_DIRT_CORNER, $02, BG_DIRT_CORNER, $04, BG_DIRT_CORNER, $06
 
-BgTileCount = 43
+; (BgTileCount defined above with greebles = 50)
 
 ;==============================================================
 ; SPRITE TILES - cute cartoony characters filling 14x14 space

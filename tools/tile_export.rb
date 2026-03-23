@@ -1,7 +1,8 @@
 #!/usr/bin/env ruby
-# Exports all tile data from the SMS roguelike into a single BMP image
-# Each tile is rendered at 4x scale. BG tiles as 8x8, sprites as 16x16 entities.
-# Usage: ruby tools/tile_export.rb [output.bmp]
+# Exports tile data from the SMS roguelike into two BMP images:
+#   - bg_tiles.bmp: background tiles rendered with palette 0
+#   - sprites.bmp:  sprite tiles rendered with palette 1
+# Usage: ruby tools/tile_export.rb [bg_output.bmp] [spr_output.bmp]
 
 TILES_FILE = File.join(__dir__, '..', 'src', 'data', 'tiles.inc')
 VDP_FILE = File.join(__dir__, '..', 'src', 'vdp.inc')
@@ -139,46 +140,50 @@ def draw_tile(bmp, pixels, palette, x, y)
   end
 end
 
-# Main
-output_file = ARGV[0] || 'tiles_export.bmp'
-palettes = parse_palette(VDP_FILE)
-pal0 = palettes[0].map { |c| sms_to_rgb(c) }
-pal1 = palettes[1].map { |c| sms_to_rgb(c) }
+# Export a set of 8x8 BG tile blocks to a BMP
+def export_bg(blocks, palette, output_file)
+  cols = 8  # tiles per row
+  tile_px = 8 * SCALE + MARGIN
 
-blocks = parse_tiles(TILES_FILE)
-bg_blocks = blocks.select { |t| t[:label] =~ /Wall|Floor|Stair|Root|Icon/i }
-spr_blocks = blocks.reject { |t| t[:label] =~ /Wall|Floor|Stair|Root|Icon/i }
+  total_tiles = blocks.sum { |b| b[:bytes].length / 32 }
+  rows = (total_tiles + cols - 1) / cols
+  img_w = MARGIN + cols * tile_px
+  img_h = MARGIN + rows * tile_px
 
-# Calculate layout
-entries = []
-bg_blocks.each { |b| entries << { block: b, pal: pal0, type: :bg } }
-spr_blocks.each { |b| entries << { block: b, pal: pal1, type: :spr } }
-
-max_w = 600
-total_h = MARGIN
-entries.each do |e|
-  if e[:type] == :bg
-    total_h += 8 * SCALE + MARGIN
-  else
-    total_h += 16 * SCALE + MARGIN
-  end
-end
-
-bmp = BMPWriter.new(max_w, total_h)
-y = MARGIN
-
-entries.each do |e|
-  block = e[:block]
-  pal = e[:pal]
-
-  if e[:type] == :bg
+  bmp = BMPWriter.new(img_w, img_h)
+  idx = 0
+  blocks.each do |block|
     n = block[:bytes].length / 32
     n.times do |i|
       px = decode_tile(block[:bytes], i * 32)
-      draw_tile(bmp, px, pal, MARGIN + i * (8 * SCALE + MARGIN), y)
+      col = idx % cols
+      row = idx / cols
+      draw_tile(bmp, px, palette, MARGIN + col * tile_px, MARGIN + row * tile_px)
+      idx += 1
     end
-    y += 8 * SCALE + MARGIN
-  else
+  end
+
+  bmp.save(output_file)
+  puts "Exported #{total_tiles} BG tiles to #{output_file} (#{img_w}x#{img_h})"
+end
+
+# Export sprite blocks to a BMP (16x16 entities, TL/BL/TR/BR quadrant order)
+def export_sprites(blocks, palette, output_file)
+  cols = 6  # sprites per row
+  spr_px = 16 * SCALE + MARGIN * 2
+
+  total_sprites = blocks.sum { |b| b[:bytes].length / 128 }
+  rows = (total_sprites + cols - 1) / cols
+  img_w = MARGIN + cols * spr_px
+  img_h = MARGIN + rows * spr_px
+
+  # Transparent = dark grey background
+  pal_with_bg = palette.dup
+  pal_with_bg[0] = [32, 32, 32]
+
+  bmp = BMPWriter.new(img_w, img_h)
+  idx = 0
+  blocks.each do |block|
     n = block[:bytes].length / 128
     n.times do |i|
       base = i * 128
@@ -186,18 +191,81 @@ entries.each do |e|
       bl = decode_tile(block[:bytes], base + 32)
       tr = decode_tile(block[:bytes], base + 64)
       br = decode_tile(block[:bytes], base + 96)
-      ox = MARGIN + i * (16 * SCALE + MARGIN * 2)
-      # Transparent = dark grey background
-      pal_with_bg = pal.dup
-      pal_with_bg[0] = [32, 32, 32]
-      draw_tile(bmp, tl, pal_with_bg, ox, y)
-      draw_tile(bmp, bl, pal_with_bg, ox, y + 8 * SCALE)
-      draw_tile(bmp, tr, pal_with_bg, ox + 8 * SCALE, y)
-      draw_tile(bmp, br, pal_with_bg, ox + 8 * SCALE, y + 8 * SCALE)
+      col = idx % cols
+      row = idx / cols
+      ox = MARGIN + col * spr_px
+      oy = MARGIN + row * spr_px
+      draw_tile(bmp, tl, pal_with_bg, ox, oy)
+      draw_tile(bmp, bl, pal_with_bg, ox, oy + 8 * SCALE)
+      draw_tile(bmp, tr, pal_with_bg, ox + 8 * SCALE, oy)
+      draw_tile(bmp, br, pal_with_bg, ox + 8 * SCALE, oy + 8 * SCALE)
+      idx += 1
     end
-    y += 16 * SCALE + MARGIN
   end
+
+  bmp.save(output_file)
+  puts "Exported #{total_sprites} sprites to #{output_file} (#{img_w}x#{img_h})"
 end
 
-bmp.save(output_file)
-puts "Exported #{entries.length} tile blocks to #{output_file} (#{max_w}x#{total_h})"
+# Parse font data from font.inc (same 4bpp format, 95 chars starting at space)
+def parse_font(file)
+  bytes = []
+  File.readlines(file).each do |line|
+    stripped = line.strip
+    next unless stripped =~ /^\.db\s+(.+)/
+    data_part = $1.sub(/;.*/, '').strip
+    data_part.split(',').each do |b|
+      b = b.strip
+      val = b.start_with?('$') ? b[1..].to_i(16) : (b =~ /^\d+$/ ? b.to_i : nil)
+      bytes << val if val
+    end
+  end
+  bytes
+end
+
+# Export font as a grid of 8x8 tiles with ASCII labels
+def export_font(font_bytes, palette, output_file)
+  cols = 16
+  num_chars = font_bytes.length / 32
+  rows = (num_chars + cols - 1) / cols
+  tile_px = 8 * SCALE + MARGIN
+  label_h = 12  # space for ASCII label below each tile
+  cell_h = 8 * SCALE + label_h + MARGIN
+  img_w = MARGIN + cols * tile_px
+  img_h = MARGIN + rows * cell_h
+
+  bmp = BMPWriter.new(img_w, img_h)
+  num_chars.times do |i|
+    px = decode_tile(font_bytes, i * 32)
+    col = i % cols
+    row = i / cols
+    x = MARGIN + col * tile_px
+    y = MARGIN + row * cell_h
+    draw_tile(bmp, px, palette, x, y)
+  end
+
+  bmp.save(output_file)
+  puts "Exported #{num_chars} font chars to #{output_file} (#{img_w}x#{img_h})"
+end
+
+# Main
+bg_output = ARGV[0] || 'bg_tiles.bmp'
+spr_output = ARGV[1] || 'sprites.bmp'
+font_output = ARGV[2] || 'font.bmp'
+
+FONT_FILE = File.join(__dir__, '..', 'src', 'data', 'font.inc')
+
+palettes = parse_palette(VDP_FILE)
+pal0 = palettes[0].map { |c| sms_to_rgb(c) }
+pal1 = palettes[1].map { |c| sms_to_rgb(c) }
+
+blocks = parse_tiles(TILES_FILE)
+# Sprite blocks have "Spr" in the label
+bg_blocks = blocks.reject { |t| t[:label] =~ /Spr/i }
+spr_blocks = blocks.select { |t| t[:label] =~ /Spr/i }
+
+export_bg(bg_blocks, pal0, bg_output)
+export_sprites(spr_blocks, pal1, spr_output)
+
+font_bytes = parse_font(FONT_FILE)
+export_font(font_bytes, pal0, font_output)

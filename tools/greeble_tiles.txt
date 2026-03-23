@@ -1,0 +1,81 @@
+; Greeble tiles for interior dirt walls
+; Small details embedded in dirt texture (colors 2,3 base)
+; Palette 0: 0=black 2=warm brown 3=dark brick 4=bright tan
+;   6=warm grey B=dark brown D=golden brown E=dark green
+
+; 1. Crack - diagonal fracture through dirt
+@GreebleCrackData
+30232322
+23032232
+22302322
+32230222
+22223022
+23222302
+32232230
+22322323
+
+; 2. Bone - small horizontal bone with knobs
+@GreebleBoneData
+32232322
+23322232
+22422422
+32244232
+32244232
+22422422
+32232232
+22322322
+
+; 3. Skull - tiny skull face
+@GreebleSkullData
+32232322
+23442232
+24004232
+24444232
+22040222
+23442322
+32232232
+22322322
+
+; 4. Sleeping mole - round grey body, closed eyes
+@GreebleMoleData
+32232322
+23322232
+22663322
+36606632
+26636232
+22663322
+32232232
+22322322
+
+; 5. Root 1 - curving tendril down-left
+@GreebleRoot1Data
+32232E22
+23322E32
+2223E322
+32E32223
+2E232232
+E3222322
+32232232
+22322322
+
+; 6. Root 2 - curving tendril down-right
+@GreebleRoot2Data
+E2232322
+2E322232
+22E32322
+322E2223
+2222E232
+23222E22
+32232232
+22322322
+
+; 7. Root 3 - Y-shaped branching root
+@GreebleRoot3Data
+E2232E22
+2E32E232
+22EE2322
+322E2223
+222E2232
+23222322
+32232232
+22322322

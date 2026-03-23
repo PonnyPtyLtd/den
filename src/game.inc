@@ -685,6 +685,9 @@ _uat_set:
     ld (SatBufXN+3),a
     ret
 _ua_gameplay:
+    ld a,(MenuState)
+    or a
+    ret nz                  ; don't update sprites while menu is open
     ld a,(TurnPhase)
     or a
     ret nz                  ; don't bob during movement
