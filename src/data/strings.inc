@@ -3,10 +3,10 @@
 ;==============================================================
 
 TitleString:    .db "Ponny's SMS Roguelike!",0
-PressStartString: .db "Press Button 1",0
+PressStartString: .db "Press Start",0
 GameOverString: .db "GAME OVER",0
 WinString:      .db "You escaped!",0
-PressRestartString: .db "Press 1 to restart",0
+PressRestartString: .db "Press Start",0
 
 ; Title screen showcase
 MonstersString: .db "Monsters:",0
@@ -26,7 +26,7 @@ RightHandString:  .db "Shield:",0
 BodyString:       .db "Armor:",0
 Pocket1String:    .db "Pocket1:",0
 Pocket2String:    .db "Pocket2:",0
-InvHelpString:    .db "U/D:Sel 1:Act 2:Back",0
+InvHelpString:    .db "U/D:Sel St:Act 2:Back",0
 
 ; Item sub-menu
 EquipString:    .db "> Equip",0
@@ -58,11 +58,11 @@ DingoRaceName:  .db "Dingo",0
 ManulRaceName:  .db "Manul",0
 ChickenRaceName:.db "Polish Chicken",0
 PickRaceStr:    .db "Choose your hero!",0
-RaceConfirmStr: .db "B1:Select  U/D:Change",0
+RaceConfirmStr: .db "Start:Go  U/D:Change",0
 
 ; Drafting
 DraftTitleStr:  .db "Choose an item!",0
-DraftHelpStr:   .db "L/R:Pick  B1:Take",0
+DraftHelpStr:   .db "L/R:Pick  Start:Take",0
 DraftRoundStr:  .db "Pick",0
 DraftOfStr:     .db "of",0
 

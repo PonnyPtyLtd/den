@@ -276,144 +276,117 @@ CloseMenu:
 DrawInventory:
     call DisplayOff
     call ClearNameTable
-    xor a
-    ld (BorderPriority),a   ; no priority for full-screen menus
-    ; Draw root border frame around inventory area
+    ; Use priority so PC sprite doesn't show through
+    ld a,1
+    ld (BorderPriority),a
+    ; Main border
     ld b,1
     ld c,0
     ld d,30
-    ld e,18
+    ld e,16
     call DrawRootBorder
-    ; Start fresh sprites
+    ; Divider: stats section at bottom (rows 14-15 inside border)
+    ; Draw a horizontal root bar at row 13 across the interior
+    ld b,2
+    ld c,13
+    ld d,28
+_inv_divLoop:
+    ld a,d
+    or a
+    jr z,_inv_divDone
+    push bc
+    push de
+    ld a,BG_ROOT_T
+    call _drb_writeTile
+    pop de
+    pop bc
+    inc b
+    dec d
+    jr _inv_divLoop
+_inv_divDone:
+    ; No sprites needed (icons via bg tiles would need new tiles, skip for now)
     xor a
     ld (NumSprites),a
-    ; Layout: sprite icons on left (pixel X=0), labels at col 4, names at col 13
-    ; Stats on right side. Character sprite + race at bottom.
+    ; Inventory slots - labels at col 3, names at col 12
     ; Row 1: Weapon
-    ld b,4
+    ld b,3
     ld c,1
     ld hl,LeftHandString
     call PrintString
     ld a,(InvLeftHand)
-    ld b,13
+    ld b,12
     ld c,1
     call PrintItemName
-    ld a,(InvLeftHand)
-    ld e,8                  ; pixel Y for row 1
-    call _invShowItemSprite
     ; Row 3: Shield
-    ld b,4
+    ld b,3
     ld c,3
     ld hl,RightHandString
     call PrintString
     ld a,(InvRightHand)
-    ld b,13
+    ld b,12
     ld c,3
     call PrintItemName
-    ld a,(InvRightHand)
-    ld e,24
-    call _invShowItemSprite
     ; Row 5: Armor
-    ld b,4
+    ld b,3
     ld c,5
     ld hl,BodyString
     call PrintString
     ld a,(InvBody)
-    ld b,13
+    ld b,12
     ld c,5
     call PrintItemName
-    ld a,(InvBody)
-    ld e,40
-    call _invShowItemSprite
     ; Row 7: Head
-    ld b,4
+    ld b,3
     ld c,7
     ld hl,HeadString
     call PrintString
     ld a,(InvHead)
-    ld b,13
+    ld b,12
     ld c,7
     call PrintItemName
-    ld a,(InvHead)
-    ld e,56
-    call _invShowItemSprite
     ; Row 9: Pocket 1
-    ld b,4
+    ld b,3
     ld c,9
     ld hl,Pocket1String
     call PrintString
     ld a,(InvPocket1)
-    ld b,13
+    ld b,12
     ld c,9
     call PrintItemName
-    ld a,(InvPocket1)
-    ld e,72
-    call _invShowItemSprite
     ; Row 11: Pocket 2
-    ld b,4
+    ld b,3
     ld c,11
     ld hl,Pocket2String
     call PrintString
     ld a,(InvPocket2)
-    ld b,13
+    ld b,12
     ld c,11
     call PrintItemName
-    ld a,(InvPocket2)
-    ld e,88
-    call _invShowItemSprite
-    ; Stats on right
-    ld b,25
-    ld c,1
+    ; Stats below divider
+    ld b,3
+    ld c,14
     ld hl,_invAtkLabel
     call PrintString
-    ld b,25
-    ld c,3
+    ld a,(PlayerAtk)
+    ld b,7
+    ld c,14
+    call _invPrintNum
+    ld b,12
+    ld c,14
     ld hl,_invDefLabel
     call PrintString
-    ld b,25
-    ld c,5
+    ld a,(PlayerDef)
+    ld b,16
+    ld c,14
+    call _invPrintNum
+    ld b,21
+    ld c,14
     ld hl,_invHPLabel
     call PrintString
-    ; Write stat values
-    di
-    ; ATK value at hw (29,1)
-    ld a,$00 + (1*64) + (29*2)
-    ld l,a
-    ld a,$38 + (1*64 + 29*2) / 256
-    ; Actually, let me just use PrintString position for simplicity
-    ei
-    ; Use a simpler approach: print "XX" strings
-    ld a,(PlayerAtk)
-    ld b,29
-    ld c,1
-    call _invPrintNum
-    ld a,(PlayerDef)
-    ld b,29
-    ld c,3
-    call _invPrintNum
     ld a,(PlayerMaxHP)
-    ld b,29
-    ld c,5
+    ld b,25
+    ld c,14
     call _invPrintNum
-    ; Character sprite at bottom right
-    ld d,208
-    ld e,112
-    ld c,SPR_PLAYER1
-    call AddSprite16Simple
-    ; Race name next to sprite
-    ld a,(PlayerRace)
-    add a,a
-    ld c,a
-    ld b,0
-    ld hl,RaceNameTable
-    add hl,bc
-    ld a,(hl)
-    inc hl
-    ld h,(hl)
-    ld l,a
-    ld b,20
-    ld c,15
-    call PrintString
     ; Draw cursor
     call DrawInvCursor
     call DisplayOn
@@ -754,6 +727,7 @@ DrawInvCursor:
     or a
     ret z
     ; Show sub-menu options below selected slot
+    ; Always 2 options: option 1 = primary (Equip or Use), option 2 = Drop
     ld a,(MenuCursor)
     ld hl,_invCursorRows
     ld c,a
@@ -762,91 +736,69 @@ DrawInvCursor:
     ld c,(hl)
     inc c
     push bc
-    ; Only show Equip for non-consumables
+    ; Option 1: Equip (equipment) or Use (consumable)
     push bc
-    call _itsm_minOpt
+    call _itsm_isConsumable ; Z = consumable
     pop bc
-    cp 2
-    jr z,_dic_drop          ; consumable = skip Equip line entirely
+    jr z,_dic_opt1_use
+    ; Equipment: draw Equip
     ld a,(InvSubMenu)
     cp 1
     jr nz,+
     ld b,14
     ld hl,EquipString
     call PrintString
-    jr _dic_drop
+    jr _dic_opt2
 +:
     ld b,14
     ld hl,_dimEquip
     call PrintString
-_dic_drop:
+    jr _dic_opt2
+_dic_opt1_use:
+    ; Consumable: draw Use
+    ld a,(InvSubMenu)
+    cp 1
+    jr nz,+
+    ld b,14
+    ld hl,UseString
+    call PrintString
+    jr _dic_opt2
++:
+    ld b,14
+    ld hl,_dimUse
+    call PrintString
+_dic_opt2:
     pop bc
     inc c
     push bc
+    ; Option 2: Drop (always)
     ld a,(InvSubMenu)
     cp 2
     jr nz,+
     ld b,14
     ld hl,DropString
     call PrintString
-    jr _dic_use
+    jr _dic_done
 +:
     ld b,14
     ld hl,_dimDrop
     call PrintString
-_dic_use:
+_dic_done:
     pop bc
-    inc c
-    ; Only show Use for consumables
-    push bc
-    call _itsm_maxOpt
-    pop bc
-    cp 3
-    ret nz                  ; not consumable, don't show Use at all
-    ld a,(InvSubMenu)
-    cp 3
-    jr nz,+
-    ld b,14
-    ld hl,UseString
-    call PrintString
-    ret
-+:
-    ld b,14
-    ld hl,_dimUse
-    call PrintString
     ret
 
 _dimEquip: .db "  Equip",0
 _dimDrop:  .db "  Drop",0
 _dimUse:   .db "  Use",0
 
-; Returns min sub-menu option: 2 (Drop) for consumables, 1 (Equip) for equipment
-_itsm_minOpt:
+; Check if current slot is a consumable. Sets Z if consumable.
+_itsm_isConsumable:
     call GetSlotPtr
     ld a,(hl)
     cp ITEM_POTION
-    jr z,_imino_2
+    ret z
     cp ITEM_WAND
-    jr z,_imino_2
-    ld a,1                  ; Equip available
-    ret
-_imino_2:
-    ld a,2                  ; Drop is first option (no Equip)
-    ret
-
-; Returns max sub-menu option for current slot: 3 if consumable, 2 otherwise
-_itsm_maxOpt:
-    call GetSlotPtr
-    ld a,(hl)
-    cp ITEM_POTION
-    jr z,_imo_3
-    cp ITEM_WAND
-    jr z,_imo_3
-    ld a,2                  ; Equip + Drop only
-    ret
-_imo_3:
-    ld a,3                  ; Equip + Drop + Use
-    ret
+    ret                     ; Z clear = equipment
 
 _invCursorRows: .db 1, 3, 5, 7, 9, 11
 
@@ -924,7 +876,7 @@ _it_noDown:
     ld a,(hl)
     or a
     ret z                   ; empty slot, nothing to do
-    call _itsm_minOpt       ; start at first valid option
+    ld a,1                  ; start at option 1
     ld (InvSubMenu),a
     call DrawInventory
     ret
@@ -938,31 +890,27 @@ _it_noB1:
     ret
 
 _it_subMenu:
-    ; Sub-menu: UP=equip, DOWN=drop, LEFT=use, B1=confirm, B2=cancel
+    ; Sub-menu: UP/DOWN toggle between options 1-2, B1=confirm, B2=cancel
     ld a,(InputNew)
-    bit 0,a                 ; UP = previous option
+    bit 0,a                 ; UP
     jr z,+
-    call _itsm_minOpt
-    ld b,a                  ; B = min
     ld a,(InvSubMenu)
-    dec a
-    cp b
-    jr nc,_itsm_setOpt
-    call _itsm_maxOpt       ; wrap to max
-    jr _itsm_setOpt
+    cp 1
+    jr z,_itsm_to2
+    jr _itsm_to1
 +:
     ld a,(InputNew)
-    bit 1,a                 ; DOWN = next option
+    bit 1,a                 ; DOWN
     jr z,+
-    call _itsm_maxOpt
-    ld b,a                  ; B = max
     ld a,(InvSubMenu)
-    cp b
-    jr nc,_itsm_wrap
-    inc a
+    cp 2
+    jr z,_itsm_to1
+    jr _itsm_to2
+_itsm_to1:
+    ld a,1
     jr _itsm_setOpt
-_itsm_wrap:
-    call _itsm_minOpt       ; wrap to min
+_itsm_to2:
+    ld a,2
 _itsm_setOpt:
     ld (InvSubMenu),a
     call PlayMenuSfx
@@ -973,21 +921,11 @@ _itsm_setOpt:
     bit 4,a                 ; B1 = confirm
     jr z,+
     ld a,(InvSubMenu)
-    cp 1
-    jr z,_it_tryEquip
     cp 2
     jr z,_it_doDrop
-    cp 3
+    ; Option 1: Equip or Use depending on item type
+    call _itsm_isConsumable
     jr z,_it_doUse
-    ret
-_it_tryEquip:
-    ; Can't equip consumables
-    call GetSlotPtr
-    ld a,(hl)
-    cp ITEM_POTION
-    ret z
-    cp ITEM_WAND
-    ret z
     jr _it_doEquip
 +:
     ld a,(InputNew)

@@ -163,13 +163,23 @@ _pt_idle:
     call StartEnemyAnimation
     ret
 _pt_noWand:
-    ; Check Button 2 for radial menu
+    ; Check Start (Button 1) for radial menu
     ld a,(InputNew)
-    bit 5,a
-    jr z,_pt_noB2
+    bit 4,a
+    jr z,_pt_noStart
     ld a,1
     ld (MenuState),a
     call DrawRadialMenu
+    ret
+_pt_noStart:
+    ; Check Button 2 for wait (skip turn)
+    ld a,(InputNew)
+    bit 5,a
+    jr z,_pt_noB2
+    call SaveEnemyOldPositions
+    call BuildDistMap
+    call UpdateEnemies
+    call StartEnemyAnimation
     ret
 _pt_noB2:
     ; Only accept direction input when idle
