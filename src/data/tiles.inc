@@ -424,14 +424,14 @@ IconXBR:
 ; Solid black tile using color 5 (non-zero, so priority bit works)
 .define BG_SOLID_BLACK 130
 SolidBlackData:
-.db $00,$00,$00,$00  ; all pixels = color 5 (0101 = bp0+bp2)
-.db $00,$00,$00,$00
-.db $00,$00,$00,$00
-.db $00,$00,$00,$00
-.db $00,$00,$00,$00
-.db $00,$00,$00,$00
-.db $00,$00,$00,$00
-.db $00,$00,$00,$00
+.db $ff,$00,$ff,$00  ; all pixels = color 5 (0101 = bp0+bp2)
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 
 ; === CONTEXTUAL DIRT WALL TILES (palette 0) ===
 ; 7 tiles: solid(x2), top edge(x2), left edge(x2), corner

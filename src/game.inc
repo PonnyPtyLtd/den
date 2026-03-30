@@ -656,12 +656,14 @@ _besa_iny:
 UpdateAnimation:
     ld a,(GameState)
     cp 1
-    jr z,_ua_gameplay
+    jp z,_ua_gameplay
     or a
     jr z,_ua_title
+    cp 4
+    jr z,_ua_raceSelect
     ret
 _ua_title:
-    ; Bob the frog on title screen at fixed position
+    ; Animate all 4 character sprites on title screen
     ld a,(AnimTimer)
     dec a
     ld (AnimTimer),a
@@ -671,19 +673,99 @@ _ua_title:
     ld a,(AnimFrame)
     xor 1
     ld (AnimFrame),a
-    ; Update title screen frog sprite (sprites 0-1)
+    ; Sprites 0-1 = Frog, 2-3 = Dingo, 4-5 = Manul, 6-7 = Chicken
     ld a,(AnimFrame)
     or a
     jr nz,_uat_f2
+    ; Frame 1
     ld a,SPR_PLAYER1
-    jr _uat_set
-_uat_f2:
-    ld a,SPR_PLAYER2
-_uat_set:
     ld (SatBufXN+1),a
     add a,2
     ld (SatBufXN+3),a
+    ld a,SPR_DINGO1
+    ld (SatBufXN+5),a
+    add a,2
+    ld (SatBufXN+7),a
+    ld a,SPR_MANUL1
+    ld (SatBufXN+9),a
+    add a,2
+    ld (SatBufXN+11),a
+    ld a,SPR_CHICKEN1
+    ld (SatBufXN+13),a
+    add a,2
+    ld (SatBufXN+15),a
     ret
+_uat_f2:
+    ; Frame 2
+    ld a,SPR_PLAYER2
+    ld (SatBufXN+1),a
+    add a,2
+    ld (SatBufXN+3),a
+    ld a,SPR_DINGO2
+    ld (SatBufXN+5),a
+    add a,2
+    ld (SatBufXN+7),a
+    ld a,SPR_MANUL2
+    ld (SatBufXN+9),a
+    add a,2
+    ld (SatBufXN+11),a
+    ld a,SPR_CHICKEN2
+    ld (SatBufXN+13),a
+    add a,2
+    ld (SatBufXN+15),a
+    ret
+
+_ua_raceSelect:
+    ; Animate the selected race sprite on character select screen
+    ld a,(AnimTimer)
+    dec a
+    ld (AnimTimer),a
+    ret nz
+    ld a,15
+    ld (AnimTimer),a
+    ld a,(AnimFrame)
+    xor 1
+    ld (AnimFrame),a
+    ; Determine which sprite pair to animate (PlayerRace * 2 = SAT XN offset)
+    ld a,(PlayerRace)
+    add a,a                  ; *2 (2 SAT entries per sprite)
+    add a,a                  ; *4 (2 bytes per SAT XN entry)
+    ld c,a
+    ld b,0
+    ; Look up frame 1 and frame 2 tile bases
+    ld a,(PlayerRace)
+    add a,a                  ; *2 (2 bytes per race in table)
+    ld e,a
+    ld d,0
+    ld hl,_raceFrameTable
+    add hl,de
+    ld a,(AnimFrame)
+    or a
+    jr nz,+
+    ld a,(hl)                ; frame 1 tile base
+    jr _uars_set
++:  inc hl
+    ld a,(hl)                ; frame 2 tile base
+_uars_set:
+    ; Write tile base to SAT XN buffer
+    push af
+    ld hl,SatBufXN
+    add hl,bc
+    inc hl                   ; XN+1 = tile index for left half
+    pop af
+    ld (hl),a
+    add a,2
+    inc hl
+    inc hl                   ; XN+3 = tile index for right half
+    ld (hl),a
+    ret
+
+_raceFrameTable:
+.db SPR_PLAYER1, SPR_PLAYER2    ; Frog
+.db SPR_DINGO1, SPR_DINGO2      ; Dingo
+.db SPR_MANUL1, SPR_MANUL2      ; Manul
+.db SPR_CHICKEN1, SPR_CHICKEN2  ; Chicken
+
 _ua_gameplay:
     ld a,(MenuState)
     or a
@@ -721,13 +803,49 @@ ShowRaceSelect:
     call InitSprites
     xor a
     ld (PlayerRace),a
-    ; Draw title
+    ; Title
     ld b,7
     ld c,2
     ld hl,PickRaceStr
     call PrintString
-    ; Show current race name and sprite
-    call DrawRacePreview
+    ; Race names (col 8, rows 5,8,11,14)
+    ld b,8
+    ld c,5
+    ld hl,FrogRaceName
+    call PrintString
+    ld b,8
+    ld c,8
+    ld hl,DingoRaceName
+    call PrintString
+    ld b,8
+    ld c,11
+    ld hl,ManulRaceName
+    call PrintString
+    ld b,8
+    ld c,14
+    ld hl,ChickenRaceName
+    call PrintString
+    ; Race sprites (col 4 = pixel 32, rows 5,8,11,14 = pixel Y 40,64,88,112)
+    xor a
+    ld (NumSprites),a
+    ld d,32
+    ld e,40
+    ld c,SPR_PLAYER1
+    call AddSprite16Simple
+    ld d,32
+    ld e,64
+    ld c,SPR_DINGO1
+    call AddSprite16Simple
+    ld d,32
+    ld e,88
+    ld c,SPR_MANUL1
+    call AddSprite16Simple
+    ld d,32
+    ld e,112
+    ld c,SPR_CHICKEN1
+    call AddSprite16Simple
+    ; Draw cursor
+    call _drawRaceCursor
     ; Help text
     ld b,5
     ld c,18
@@ -736,38 +854,37 @@ ShowRaceSelect:
     call DisplayOn
     ret
 
-DrawRacePreview:
-    ; Clear old name area
+; Draw '>' cursor at selected race row, clear others
+_drawRaceCursor:
+    ld b,6
+    ld c,5
+    ld a,' '
+    call _writeChar8
+    ld b,6
+    ld c,8
+    ld a,' '
+    call _writeChar8
+    ld b,6
+    ld c,11
+    ld a,' '
+    call _writeChar8
     ld b,6
     ld c,14
-    ld hl,_raceBlank
-    call PrintString
-    ; Show race name centered
+    ld a,' '
+    call _writeChar8
+    ; Draw '>' at selected row
     ld a,(PlayerRace)
-    add a,a                 ; *2
+    ld hl,_raceRows
     ld c,a
     ld b,0
-    ld hl,RaceNameTable
     add hl,bc
-    ld a,(hl)
-    inc hl
-    ld h,(hl)
-    ld l,a                  ; HL = race name string
-    ld b,8
-    ld c,14
-    call PrintString
-    ; Show race sprite as sprites
-    xor a
-    ld (NumSprites),a
-    ; Load race sprite to preview position (pixel 112, 128)
-    call LoadRaceSprites    ; load to VRAM
-    ld d,112
-    ld e,112
-    ld c,SPR_PLAYER1
-    call AddSprite16Simple
+    ld c,(hl)
+    ld b,6
+    ld a,'>'
+    call _writeChar8
     ret
 
-_raceBlank: .db "                  ",0
+_raceRows: .db 5, 8, 11, 14
 
 RaceSelectTick:
     ld a,(InputNew)
@@ -782,9 +899,7 @@ RaceSelectTick:
     dec a
     ld (PlayerRace),a
     call PlayMenuSfx
-    call DisplayOff
-    call DrawRacePreview
-    call DisplayOn
+    call _drawRaceCursor
     ret
 +:
     ; DOWN - next race
@@ -797,9 +912,7 @@ RaceSelectTick:
     inc a
     ld (PlayerRace),a
     call PlayMenuSfx
-    call DisplayOff
-    call DrawRacePreview
-    call DisplayOn
+    call _drawRaceCursor
     ret
 +:
     ; B1 - confirm race
@@ -1319,67 +1432,98 @@ ShowTitleScreen:
     call DisplayOff
     call ClearNameTable
     call InitSprites
-    ; Title text
-    ld b,5
-    ld c,2
+    ; Reload sprite tiles (resets frog to tile 0 after race select)
+    di
+    ld a,$00
+    out ($bf),a
+    ld a,$20 | $40
+    out ($bf),a
+    ld hl,PlayerSpr1Data
+    ld bc,SpriteTileDataEnd-PlayerSpr1Data
+_sts_loadSpr:
+    ld a,(hl)
+    out ($be),a
+    inc hl
+    dec bc
+    ld a,b
+    or c
+    jp nz,_sts_loadSpr
+    ei
+    ; "Den" centered (col 14)
+    ld b,14
+    ld c,1
     ld hl,TitleString
     call PrintString
-    ; "Monsters:"
-    ld b,11
+    ; "Monsters:" centered (row 8)
+    ld b,12
     ld c,8
     ld hl,MonstersString
     call PrintString
-    ; Monster labels
+    ; Monster labels (row 12) centered under each sprite
+    ; Sprites at pixel X: 24,88,152,216 = hw col 3,11,19,27 (center col 4,12,20,28)
     ld b,3
-    ld c,16
+    ld c,12
     ld hl,RatString
     call PrintString
-    ld b,9
-    ld c,16
+    ld b,10
+    ld c,12
     ld hl,SnakeString
     call PrintString
-    ld b,17
-    ld c,16
+    ld b,19
+    ld c,12
     ld hl,OrcString
     call PrintString
-    ld b,23
-    ld c,16
+    ld b,25
+    ld c,12
     ld hl,BadgerString
     call PrintString
-    ; "Press Button 1"
-    ld b,9
-    ld c,21
+    ; "Press Start" centered (row 16)
+    ld b,10
+    ld c,16
     ld hl,PressStartString
     call PrintString
-    ; Set up sprites for title showcase
+    ; Build timestamp (row 19)
+    ld b,8
+    ld c,19
+    ld hl,BuildTimeString
+    call PrintString
+    ; Sprites: 4 characters (row 4, pixel Y=32) evenly spaced
+    ; No labels - just the sprites
     xor a
     ld (NumSprites),a
-    ; Frog player at center of row 6 (pixel Y=96, X=112)
-    ld d,112
-    ld e,80
+    ld d,24
+    ld e,32
     ld c,SPR_PLAYER1
     call AddSprite16Simple
-    ; Monsters on row 10 (pixel Y=160)
-    ld d,32
-    ld e,144
+    ld d,88
+    ld e,32
+    ld c,SPR_DINGO1
+    call AddSprite16Simple
+    ld d,152
+    ld e,32
+    ld c,SPR_MANUL1
+    call AddSprite16Simple
+    ld d,216
+    ld e,32
+    ld c,SPR_CHICKEN1
+    call AddSprite16Simple
+    ; 4 monsters (row 10, pixel Y=80) evenly spaced
+    ld d,24
+    ld e,80
     ld c,SPR_RAT
     call AddSprite16Simple
-    ld d,80
-    ld e,144
+    ld d,88
+    ld e,80
     ld c,SPR_SNAKE
     call AddSprite16Simple
-    ld d,144
-    ld e,144
+    ld d,152
+    ld e,80
     ld c,SPR_ORC
     call AddSprite16Simple
-    ld d,192
-    ld e,144
+    ld d,216
+    ld e,80
     ld c,SPR_BADGER
     call AddSprite16Simple
-    ; Store player sprite Y for title bob
-    ld a,80
-    ld (SatBufY+0),a
-    ld (SatBufY+1),a
     call DisplayOn
     ret
 

@@ -2,13 +2,14 @@
 ; Game text strings (null-terminated ASCII)
 ;==============================================================
 
-TitleString:    .db "Ponny's SMS Roguelike!",0
+TitleString:    .db "Den",0
 PressStartString: .db "Press Start",0
 GameOverString: .db "GAME OVER",0
 WinString:      .db "You escaped!",0
 PressRestartString: .db "Press Start",0
 
 ; Title screen showcase
+CharactersString: .db "Characters:",0
 MonstersString: .db "Monsters:",0
 ItemsString:    .db "Items:",0
 RatString:      .db "Rat",0
@@ -53,6 +54,7 @@ HeadString:       .db "Head:",0
 UseString:        .db "> Use",0
 
 ; Race names
+FrogShortStr:   .db "Frog",0
 FrogRaceName:   .db "Poison Arrow Frog",0
 DingoRaceName:  .db "Dingo",0
 ManulRaceName:  .db "Manul",0

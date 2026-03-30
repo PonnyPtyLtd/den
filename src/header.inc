@@ -44,6 +44,13 @@
 .define SPR_ARMOR1   68
 .define SPR_ARMOR2   72
 .define SPR_ARMOR3   76
+; Race variant sprites (at their native VRAM positions)
+.define SPR_DINGO1   80
+.define SPR_DINGO2   84
+.define SPR_MANUL1   88
+.define SPR_MANUL2   92
+.define SPR_CHICKEN1 96
+.define SPR_CHICKEN2 100
 .define SPR_FIREBALL 104
 
 .define MAX_SPRITES 34
@@ -173,4 +180,4 @@ NumGreebles db
 ;==============================================================
 ; SDSC tag
 ;==============================================================
-.sdsctag 1.2,"Ponny's SMS Roguelike","A simple roguelike","Ponny"
+.sdsctag 1.2,"Den","A burrow roguelike","Ponny"

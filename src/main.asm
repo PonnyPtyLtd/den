@@ -154,3 +154,4 @@ GameLoop:
 .include "data/strings.inc"
 .include "data/tiles.inc"
 .include "data/font.inc"
+.include "buildtime.inc"

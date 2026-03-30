@@ -461,6 +461,17 @@ _rfm_done:
 ;--------------------------------------------------------------
 RenderHUD:
     di
+    ; Clear HUD row first (32 tiles × 2 bytes = 64 bytes of zeros)
+    ld a,$80
+    out ($bf),a
+    ld a,$3D | $40
+    out ($bf),a
+    ld b,64
+_hud_clear:
+    xor a
+    out ($be),a
+    djnz _hud_clear
+    ; Now write hearts starting at row 22 col 0
     ld a,$80
     out ($bf),a
     ld a,$3D | $40

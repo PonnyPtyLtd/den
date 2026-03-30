@@ -28,10 +28,16 @@ $(OUTPUT_ROM): $(OBJECTS)
 	@echo "$(OBJECTS)" >> $(LINK_FILE)
 	$(WLALINK) -d -r -v -S $(LINK_FILE) $(OUTPUT_ROM)
 
+# Generate build timestamp
+$(BUILD_DIR)/buildtime.inc: FORCE
+	@echo 'BuildTimeString: .db "$(shell date +"%Y-%m-%d %H:%M")",0' > $@
+
+FORCE:
+
 # Assemble source to object file
-$(BUILD_DIR)/main.o: $(MAIN_ASM) $(wildcard $(SRC_DIR)/*.inc $(SRC_DIR)/data/*.inc)
+$(BUILD_DIR)/main.o: $(MAIN_ASM) $(wildcard $(SRC_DIR)/*.inc $(SRC_DIR)/data/*.inc) $(BUILD_DIR)/buildtime.inc
 	@echo "Assembling $<..."
-	$(WLA) -I $(SRC_DIR) -o $@ $<
+	$(WLA) -I $(SRC_DIR) -I $(BUILD_DIR) -o $@ $<
 
 # Remove all build artifacts
 clean:
@@ -42,13 +48,12 @@ run: $(OUTPUT_ROM)
 	@echo "Running ROM in Mednafen..."
 	mednafen $(OUTPUT_ROM)
 
-# Export tiles to BMPs (separate files per palette)
+# Export tiles to BMP (combined BG + sprites, plus font)
 tiles-export:
-	ruby tools/tile_export.rb bg_tiles.bmp sprites.bmp font.bmp
-	@echo "Exported bg_tiles.bmp (pal 0), sprites.bmp (pal 1), font.bmp (pal 0)"
+	ruby tools/tile_export.rb tiles_export.bmp font.bmp
 
-# Import edited tiles back from BMPs
+# Import edited tiles back from BMP
 tiles-import:
-	ruby tools/tile_import.rb bg_tiles.bmp sprites.bmp font.bmp
+	ruby tools/tile_import.rb tiles_export.bmp font.bmp
 
 .PHONY: all clean run tiles-export tiles-import
