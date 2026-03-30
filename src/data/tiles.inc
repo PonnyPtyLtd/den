@@ -647,12 +647,12 @@ HeartEmptyData:
 .db $00,$28,$00,$28
 .db $00,$10,$00,$10
 
-; === SELECTED ICON VARIANTS (white border in 2px margin) ===
+; === SELECTED ICON VARIANTS (white 1px border in outer margin) ===
 ; Border color 10 (white): BP0=0, BP1=1, BP2=0, BP3=1
-; TL border: rows 0-1 full, rows 2-7 cols 0-1
-; TR border: rows 0-1 full, rows 2-7 cols 6-7
-; BL border: rows 0-5 cols 0-1, rows 6-7 full
-; BR border: rows 0-5 cols 6-7, rows 6-7 full
+; TL border: row 0 full, rows 1-7 col 0 ($80)
+; TR border: row 0 full, rows 1-7 col 7 ($01)
+; BL border: rows 0-6 col 0 ($80), row 7 full
+; BR border: rows 0-6 col 7 ($01), row 7 full
 
 .define BG_ICON_PICK_SEL_TL 150
 .define BG_ICON_PICK_SEL_TR 151
@@ -669,116 +669,116 @@ HeartEmptyData:
 
 ; --- Pickup selected ---
 IconPickSelTL:
-.db $00,$FF,$00,$FF    ; border row
-.db $00,$FF,$00,$FF
-.db $3F,$C0,$3C,$C0    ; fg=$03
-.db $3F,$C0,$38,$C0    ; fg=$07
-.db $3F,$C0,$30,$C0    ; fg=$0F
-.db $3F,$C0,$3C,$C0    ; fg=$03
-.db $3F,$C0,$3C,$C0
-.db $3F,$C0,$3C,$C0
+.db $00,$FF,$00,$FF    ; row 0: border top
+.db $7F,$80,$7F,$80    ; row 1: border left
+.db $7F,$80,$7C,$80    ; fg=$03
+.db $7F,$80,$78,$80    ; fg=$07
+.db $7F,$80,$70,$80    ; fg=$0F
+.db $7F,$80,$7C,$80    ; fg=$03
+.db $7F,$80,$7C,$80
+.db $7F,$80,$7C,$80
 IconPickSelTR:
-.db $00,$FF,$00,$FF
-.db $00,$FF,$00,$FF
-.db $FC,$03,$3C,$03    ; fg=$C0
-.db $FC,$03,$1C,$03    ; fg=$E0
-.db $FC,$03,$0C,$03    ; fg=$F0
-.db $FC,$03,$3C,$03    ; fg=$C0
-.db $FC,$03,$3C,$03
-.db $FC,$03,$3C,$03
+.db $00,$FF,$00,$FF    ; border top
+.db $FE,$01,$FE,$01    ; border right
+.db $FE,$01,$3E,$01    ; fg=$C0
+.db $FE,$01,$1E,$01    ; fg=$E0
+.db $FE,$01,$0E,$01    ; fg=$F0
+.db $FE,$01,$3E,$01    ; fg=$C0
+.db $FE,$01,$3E,$01
+.db $FE,$01,$3E,$01
 IconPickSelBL:
-.db $3F,$C0,$20,$C0    ; fg=$1F
-.db $3F,$C0,$27,$C0    ; fg=$18
-.db $3F,$C0,$27,$C0
-.db $3F,$C0,$20,$C0    ; fg=$1F
-.db $3F,$C0,$3F,$C0    ; fg=$00
-.db $3F,$C0,$3F,$C0
-.db $00,$FF,$00,$FF    ; border row
-.db $00,$FF,$00,$FF
+.db $7F,$80,$60,$80    ; fg=$1F
+.db $7F,$80,$67,$80    ; fg=$18
+.db $7F,$80,$67,$80
+.db $7F,$80,$60,$80    ; fg=$1F
+.db $7F,$80,$7F,$80    ; fg=$00
+.db $7F,$80,$7F,$80
+.db $7F,$80,$7F,$80    ; border left
+.db $00,$FF,$00,$FF    ; border bottom
 IconPickSelBR:
-.db $FC,$03,$04,$03    ; fg=$F8
-.db $FC,$03,$E4,$03    ; fg=$18
-.db $FC,$03,$E4,$03
-.db $FC,$03,$04,$03    ; fg=$F8
-.db $FC,$03,$FC,$03    ; fg=$00
-.db $FC,$03,$FC,$03
-.db $00,$FF,$00,$FF
-.db $00,$FF,$00,$FF
+.db $FE,$01,$06,$01    ; fg=$F8
+.db $FE,$01,$E6,$01    ; fg=$18
+.db $FE,$01,$E6,$01
+.db $FE,$01,$06,$01    ; fg=$F8
+.db $FE,$01,$FE,$01    ; fg=$00
+.db $FE,$01,$FE,$01
+.db $FE,$01,$FE,$01    ; border right
+.db $00,$FF,$00,$FF    ; border bottom
 
 ; --- Inventory selected ---
 IconInvSelTL:
 .db $00,$FF,$00,$FF
-.db $00,$FF,$00,$FF
-.db $3F,$C0,$38,$C0    ; fg=$07
-.db $3F,$C0,$37,$C0    ; fg=$08
-.db $3F,$C0,$20,$C0    ; fg=$1F
-.db $3F,$C0,$20,$C0
-.db $3F,$C0,$07,$C0    ; fg=$38
-.db $3F,$C0,$07,$C0
+.db $7F,$80,$7F,$80
+.db $7F,$80,$78,$80    ; fg=$07
+.db $7F,$80,$77,$80    ; fg=$08
+.db $7F,$80,$60,$80    ; fg=$1F
+.db $7F,$80,$60,$80
+.db $7F,$80,$47,$80    ; fg=$38
+.db $7F,$80,$47,$80
 IconInvSelTR:
 .db $00,$FF,$00,$FF
-.db $00,$FF,$00,$FF
-.db $FC,$03,$3C,$03    ; fg=$C0
-.db $FC,$03,$DC,$03    ; fg=$20
-.db $FC,$03,$0C,$03    ; fg=$F0
-.db $FC,$03,$0C,$03
-.db $FC,$03,$C4,$03    ; fg=$38
-.db $FC,$03,$C4,$03
+.db $FE,$01,$FE,$01
+.db $FE,$01,$3E,$01    ; fg=$C0
+.db $FE,$01,$DE,$01    ; fg=$20
+.db $FE,$01,$0E,$01    ; fg=$F0
+.db $FE,$01,$0E,$01
+.db $FE,$01,$C6,$01    ; fg=$38
+.db $FE,$01,$C6,$01
 IconInvSelBL:
-.db $3F,$C0,$00,$C0    ; fg=$3F
-.db $3F,$C0,$00,$C0
-.db $3F,$C0,$00,$C0
-.db $3F,$C0,$20,$C0    ; fg=$1F
-.db $3F,$C0,$3F,$C0    ; fg=$00
-.db $3F,$C0,$3F,$C0
-.db $00,$FF,$00,$FF
+.db $7F,$80,$40,$80    ; fg=$3F
+.db $7F,$80,$40,$80
+.db $7F,$80,$40,$80
+.db $7F,$80,$60,$80    ; fg=$1F
+.db $7F,$80,$7F,$80    ; fg=$00
+.db $7F,$80,$7F,$80
+.db $7F,$80,$7F,$80
 .db $00,$FF,$00,$FF
 IconInvSelBR:
-.db $FC,$03,$04,$03    ; fg=$F8
-.db $FC,$03,$04,$03
-.db $FC,$03,$04,$03
-.db $FC,$03,$0C,$03    ; fg=$F0
-.db $FC,$03,$FC,$03
-.db $FC,$03,$FC,$03
-.db $00,$FF,$00,$FF
+.db $FE,$01,$06,$01    ; fg=$F8
+.db $FE,$01,$06,$01
+.db $FE,$01,$06,$01
+.db $FE,$01,$0E,$01    ; fg=$F0
+.db $FE,$01,$FE,$01
+.db $FE,$01,$FE,$01
+.db $FE,$01,$FE,$01
 .db $00,$FF,$00,$FF
 
 ; --- Wait selected ---
 IconWaitSelTL:
 .db $00,$FF,$00,$FF
-.db $00,$FF,$00,$FF
-.db $3F,$C0,$20,$C0    ; fg=$1F
-.db $3F,$C0,$30,$C0    ; fg=$0F
-.db $3F,$C0,$38,$C0    ; fg=$07
-.db $3F,$C0,$3C,$C0    ; fg=$03
-.db $3F,$C0,$3E,$C0    ; fg=$01
-.db $3F,$C0,$3E,$C0
+.db $7F,$80,$7F,$80
+.db $7F,$80,$60,$80    ; fg=$1F
+.db $7F,$80,$70,$80    ; fg=$0F
+.db $7F,$80,$78,$80    ; fg=$07
+.db $7F,$80,$7C,$80    ; fg=$03
+.db $7F,$80,$7E,$80    ; fg=$01
+.db $7F,$80,$7E,$80
 IconWaitSelTR:
 .db $00,$FF,$00,$FF
-.db $00,$FF,$00,$FF
-.db $FC,$03,$0C,$03    ; fg=$F0
-.db $FC,$03,$1C,$03    ; fg=$E0
-.db $FC,$03,$3C,$03    ; fg=$C0
-.db $FC,$03,$3C,$03    ; fg=$C0
-.db $FC,$03,$7C,$03    ; fg=$80
-.db $FC,$03,$7C,$03
+.db $FE,$01,$FE,$01
+.db $FE,$01,$0E,$01    ; fg=$F0
+.db $FE,$01,$1E,$01    ; fg=$E0
+.db $FE,$01,$3E,$01    ; fg=$C0
+.db $FE,$01,$3E,$01    ; fg=$C0
+.db $FE,$01,$7E,$01    ; fg=$80
+.db $FE,$01,$7E,$01
 IconWaitSelBL:
-.db $3F,$C0,$3C,$C0    ; fg=$03
-.db $3F,$C0,$38,$C0    ; fg=$07
-.db $3F,$C0,$30,$C0    ; fg=$0F
-.db $3F,$C0,$20,$C0    ; fg=$1F
-.db $3F,$C0,$3F,$C0    ; fg=$00
-.db $3F,$C0,$3F,$C0
-.db $00,$FF,$00,$FF
+.db $7F,$80,$7C,$80    ; fg=$03
+.db $7F,$80,$78,$80    ; fg=$07
+.db $7F,$80,$70,$80    ; fg=$0F
+.db $7F,$80,$60,$80    ; fg=$1F
+.db $7F,$80,$7F,$80    ; fg=$00
+.db $7F,$80,$7F,$80
+.db $7F,$80,$7F,$80
 .db $00,$FF,$00,$FF
 IconWaitSelBR:
-.db $FC,$03,$3C,$03    ; fg=$C0
-.db $FC,$03,$1C,$03    ; fg=$E0
-.db $FC,$03,$0C,$03    ; fg=$F0
-.db $FC,$03,$04,$03    ; fg=$F8
-.db $FC,$03,$FC,$03
-.db $FC,$03,$FC,$03
-.db $00,$FF,$00,$FF
+.db $FE,$01,$3E,$01    ; fg=$C0
+.db $FE,$01,$1E,$01    ; fg=$E0
+.db $FE,$01,$0E,$01    ; fg=$F0
+.db $FE,$01,$06,$01    ; fg=$F8
+.db $FE,$01,$FE,$01
+.db $FE,$01,$FE,$01
+.db $FE,$01,$FE,$01
 .db $00,$FF,$00,$FF
 
 BgTileCount = 67

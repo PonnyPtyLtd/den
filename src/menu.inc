@@ -10,6 +10,9 @@
 DrawRadialMenu:
     xor a
     ld (MenuCursor),a
+    ld (NumSprites),a       ; hide all sprites while menu open
+    ld a,$D0
+    ld (SatBufY),a          ; SAT terminator in first slot
     ld a,1
     ld (BorderPriority),a   ; priority = menu renders over sprites
     ; 3x3 grid of 16x16 icons = 6x6 hw tiles + 2 for border = 8x8
@@ -319,6 +322,7 @@ CloseMenu:
     call RenderFullMap
     call RenderHUD
     call DisplayOn
+    call BuildSpriteTable   ; restore sprites after menu
     ret
 
 ;--------------------------------------------------------------
