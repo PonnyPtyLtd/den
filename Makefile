@@ -30,7 +30,7 @@ $(OUTPUT_ROM): $(OBJECTS)
 
 # Generate build timestamp
 $(BUILD_DIR)/buildtime.inc: FORCE
-	@echo 'BuildTimeString: .db "$(shell date +"%Y-%m-%d %H:%M")",0' > $@
+	@echo 'BuildTimeString: .db "Alpha $(shell date +"%Y-%m-%d %H:%M")",0' > $@
 
 FORCE:
 

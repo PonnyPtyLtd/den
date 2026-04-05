@@ -1483,9 +1483,14 @@ _sts_loadSpr:
     ld hl,PressStartString
     call PrintString
     ; Build timestamp (row 19)
-    ld b,8
+    ld b,5
     ld c,19
     ld hl,BuildTimeString
+    call PrintString
+    ; Copyright (row 20)
+    ld b,1
+    ld c,20
+    ld hl,CopyrightString
     call PrintString
     ; Sprites: 4 characters (row 4, pixel Y=32) evenly spaced
     ; No labels - just the sprites
@@ -1543,7 +1548,7 @@ ShowDeadScreen:
     ld c,10
     ld hl,GameOverString
     call PrintString
-    ld b,6
+    ld b,10
     ld c,14
     ld hl,PressRestartString
     call PrintString
@@ -1566,7 +1571,7 @@ ShowWinScreen:
     ld c,10
     ld hl,WinString
     call PrintString
-    ld b,6
+    ld b,10
     ld c,14
     ld hl,PressRestartString
     call PrintString

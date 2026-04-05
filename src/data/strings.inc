@@ -3,6 +3,7 @@
 ;==============================================================
 
 TitleString:    .db "Den",0
+CopyrightString: .db "(c) 2025 John ",34,"Ponny",34," Sherwood",0
 PressStartString: .db "Press Start",0
 GameOverString: .db "GAME OVER",0
 WinString:      .db "You escaped!",0
