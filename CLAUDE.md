@@ -12,8 +12,8 @@ Sega Master System roguelike written in Z80 assembly using the WLA-DX assembler.
 make          # Assemble and link → build/game.sms
 make run      # Build then launch in Mednafen emulator
 make clean    # Remove build artifacts
-make tiles-export  # Export all BG tiles to tiles_export.bmp (Ruby)
-make tiles-import  # Import edited tiles from tiles_export.bmp (Ruby)
+make tiles-export  # Export BG and sprite tiles to BMPs (Ruby)
+make tiles-import  # Import edited tiles back from BMPs (Ruby)
 ```
 
 Prerequisites: `wla-z80`, `wlalink` (WLA-DX), `mednafen`, `ruby` (for tile tools).

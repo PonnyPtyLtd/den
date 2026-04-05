@@ -21,7 +21,7 @@ make clean  # Remove build artifacts
 ## Tile Editing
 
 ```bash
-make tiles-export  # Export BG tiles to tiles_export.bmp
+make tiles-export  # Export BG and sprite tiles to BMPs
 make tiles-import  # Import edited tiles back in
 ```
 
