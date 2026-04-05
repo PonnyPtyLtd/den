@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
-# Imports tile data from a combined BMP back into tiles.inc
-# BMP must match the layout produced by tile_export.rb
-# Usage: ruby tools/tile_import.rb [tiles_export.bmp] [font.bmp]
-# Either argument can be "-" to skip that import.
+# Imports tile data from BMPs back into tiles.inc and font.inc
+# BMPs must match the layout produced by tile_export.rb
+# Usage: ruby tools/tile_import.rb [bg_tiles.bmp] [sprites.bmp] [font.bmp]
+# Any argument can be "-" to skip that import.
 
 TILES_FILE = File.join(__dir__, '..', 'src', 'data', 'tiles.inc')
 FONT_FILE  = File.join(__dir__, '..', 'src', 'data', 'font.inc')
@@ -10,8 +10,8 @@ VDP_FILE   = File.join(__dir__, '..', 'src', 'vdp.inc')
 SCALE  = 1
 MARGIN = 1
 
-# Layout must match tile_export.rb exactly
-LAYOUT = [
+# Layouts must match tile_export.rb exactly
+BG_LAYOUT = [
   [
     [:bg8, 'WallTLData'],
     [:bg8, 'WallTRData'],
@@ -65,6 +65,9 @@ LAYOUT = [
     [:bg8, 'Heart14Data'],
     [:bg8, 'HeartEmptyData'],
   ],
+]
+
+SPR_LAYOUT = [
   [
     [:spr, 'PlayerSpr1Data'],
     [:spr, 'PlayerSpr2Data'],
@@ -102,16 +105,20 @@ LAYOUT = [
   ],
 ]
 
-LAYOUT_LABELS = LAYOUT.flat_map { |row|
-  row.flat_map { |item|
-    case item[0]
-    when :bg8  then [item[1]]
-    when :bg16 then item[1..4]
-    when :spr  then [item[1]]
-    else []
-    end
+def labels_from_layout(layout)
+  layout.flat_map { |row|
+    row.flat_map { |item|
+      case item[0]
+      when :bg8  then [item[1]]
+      when :bg16 then item[1..4]
+      when :spr  then [item[1]]
+      else []
+      end
+    }
   }
-}.freeze
+end
+
+ALL_LABELS = (labels_from_layout(BG_LAYOUT) + labels_from_layout(SPR_LAYOUT)).freeze
 
 # Simple BMP reader (24/32-bit uncompressed)
 class BMPReader
@@ -197,12 +204,13 @@ def read_tile(bmp, palette_rgb, x, y, transparent_bg: false)
   }}
 end
 
-# Compute layout positions (must match tile_export.rb)
-def compute_layout
+# Compute placements from a layout → [{label:, x:, y:, type:}, ...] + dimensions
+def compute_layout(layout)
   placements = []
   cur_y = MARGIN
+  img_w = 0
 
-  LAYOUT.each do |row|
+  layout.each do |row|
     row_h = row.any? { |item| item[0] == :bg16 || item[0] == :spr } ? 16 * SCALE : 8 * SCALE
     cur_x = MARGIN
 
@@ -225,10 +233,11 @@ def compute_layout
       end
     end
 
+    img_w = [img_w, cur_x].max
     cur_y += row_h + MARGIN
   end
 
-  placements
+  [placements, img_w, cur_y]
 end
 
 # Parse tile blocks from tiles.inc, tracking .db line positions per label
@@ -285,16 +294,15 @@ def replace_db_lines(lines, block, new_bytes)
   end
 end
 
-# Import tiles from combined BMP
-def import_tiles(bmp_path, pal0_rgb, pal1_rgb, tiles_file)
+# Import BG tiles from BMP
+def import_bg(bmp_path, pal0_rgb, tiles_file)
   return 0 unless bmp_path && bmp_path != "-" && File.exist?(bmp_path)
 
   bmp = BMPReader.new(bmp_path)
-  placements = compute_layout
-  lines, blocks = parse_tile_blocks(tiles_file, LAYOUT_LABELS)
+  placements, _, _ = compute_layout(BG_LAYOUT)
+  lines, blocks = parse_tile_blocks(tiles_file, ALL_LABELS)
 
-  # BG palette: color 0 is rendered as dark grey (16,16,16) in the export
-  # to distinguish from color 5 which is also black. Match that here.
+  # Color 0 rendered as dark grey in export to distinguish from color 5
   bg_pal = pal0_rgb.dup
   bg_pal[0] = [16, 16, 16] if bg_pal[0] == [0, 0, 0]
 
@@ -302,42 +310,57 @@ def import_tiles(bmp_path, pal0_rgb, pal1_rgb, tiles_file)
   placements.each do |p|
     block = blocks[p[:label]]
     next unless block
-
-    case p[:type]
-    when :bg8
-      pixels = read_tile(bmp, bg_pal, p[:x], p[:y])
-      new_bytes = encode_tile(pixels)
-      if new_bytes.length == block[:bytes].length
-        replace_db_lines(lines, block, new_bytes)
-        changes += 1
-      end
-    when :spr
-      # Read 16x16 sprite, split into TL/BL/TR/BR quadrants
-      full = Array.new(16) { |py| Array.new(16) { |px|
-        r, g, b = bmp.get(p[:x] + px * SCALE + SCALE / 2, p[:y] + py * SCALE + SCALE / 2)
-        ci = nearest_color(r, g, b, pal1_rgb)
-        ci = 0 if r < 48 && g < 48 && b < 48
-        ci
-      }}
-      tl = full[0..7].map { |r| r[0..7] }
-      bl = full[8..15].map { |r| r[0..7] }
-      tr = full[0..7].map { |r| r[8..15] }
-      br = full[8..15].map { |r| r[8..15] }
-      new_bytes = []
-      [tl, bl, tr, br].each { |t| new_bytes.concat(encode_tile(t)) }
-      if new_bytes.length == block[:bytes].length
-        replace_db_lines(lines, block, new_bytes)
-        changes += 1
-      end
+    pixels = read_tile(bmp, bg_pal, p[:x], p[:y])
+    new_bytes = encode_tile(pixels)
+    if new_bytes.length == block[:bytes].length
+      replace_db_lines(lines, block, new_bytes)
+      changes += 1
     end
   end
 
   File.write(tiles_file, lines.join)
-  puts "Imported #{changes} tile blocks from #{bmp_path}"
+  puts "Imported #{changes} BG tile blocks from #{bmp_path}"
   changes
 end
 
-# Import font (unchanged)
+# Import sprites from BMP
+def import_sprites(bmp_path, pal1_rgb, tiles_file)
+  return 0 unless bmp_path && bmp_path != "-" && File.exist?(bmp_path)
+
+  bmp = BMPReader.new(bmp_path)
+  placements, _, _ = compute_layout(SPR_LAYOUT)
+  lines, blocks = parse_tile_blocks(tiles_file, ALL_LABELS)
+
+  changes = 0
+  placements.each do |p|
+    block = blocks[p[:label]]
+    next unless block
+
+    # Read 16x16 sprite, split into TL/BL/TR/BR quadrants
+    full = Array.new(16) { |py| Array.new(16) { |px|
+      r, g, b = bmp.get(p[:x] + px * SCALE + SCALE / 2, p[:y] + py * SCALE + SCALE / 2)
+      ci = nearest_color(r, g, b, pal1_rgb)
+      ci = 0 if r < 48 && g < 48 && b < 48
+      ci
+    }}
+    tl = full[0..7].map { |r| r[0..7] }
+    bl = full[8..15].map { |r| r[0..7] }
+    tr = full[0..7].map { |r| r[8..15] }
+    br = full[8..15].map { |r| r[8..15] }
+    new_bytes = []
+    [tl, bl, tr, br].each { |t| new_bytes.concat(encode_tile(t)) }
+    if new_bytes.length == block[:bytes].length
+      replace_db_lines(lines, block, new_bytes)
+      changes += 1
+    end
+  end
+
+  File.write(tiles_file, lines.join)
+  puts "Imported #{changes} sprite blocks from #{bmp_path}"
+  changes
+end
+
+# Import font
 def import_font(bmp_path, palette_rgb, font_file)
   return 0 unless bmp_path && bmp_path != "-" && File.exist?(bmp_path)
   bmp = BMPReader.new(bmp_path)
@@ -402,15 +425,17 @@ def import_font(bmp_path, palette_rgb, font_file)
 end
 
 # Main
-tiles_input = ARGV[0] || 'tiles_export.bmp'
-font_input  = ARGV[1] || 'font.bmp'
+bg_input   = ARGV[0] || 'bg_tiles.bmp'
+spr_input  = ARGV[1] || 'sprites.bmp'
+font_input = ARGV[2] || 'font.bmp'
 
 palettes = parse_palette(VDP_FILE)
 pal0 = palettes[0].map { |c| sms_to_rgb(c) }
 pal1 = palettes[1].map { |c| sms_to_rgb(c) }
 
 total = 0
-total += import_tiles(tiles_input, pal0, pal1, TILES_FILE)
+total += import_bg(bg_input, pal0, TILES_FILE)
+total += import_sprites(spr_input, pal1, TILES_FILE)
 total += import_font(font_input, pal0, FONT_FILE)
 
 puts "Done. #{total} blocks updated." if total > 0

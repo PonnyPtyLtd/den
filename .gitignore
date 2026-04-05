@@ -1,5 +1,6 @@
 build/
 .DS_Store
+.idea/
 bg_tiles.bmp
 sprites.bmp
 font.bmp

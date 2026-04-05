@@ -267,155 +267,155 @@ RootR2Data:
 
 ; --- Inventory (backpack) icon ---
 IconInvTL:
-.db $FF,$00,$FF,$00    ; row 0
-.db $FF,$00,$FF,$00    ; row 1
-.db $FF,$00,$F8,$00    ; row 2: handle strap
-.db $FF,$00,$F7,$00    ; row 3: handle opening
-.db $FF,$00,$E0,$00    ; row 4: flap
-.db $FF,$00,$E0,$00    ; row 5: body
-.db $FF,$00,$C7,$00    ; row 6: pocket outline
-.db $FF,$00,$C7,$00    ; row 7: pocket
+.db $ff,$00,$ff,$00  ; row 0
+.db $ff,$00,$ff,$00  ; row 1
+.db $ff,$00,$f8,$00  ; row 2: handle strap
+.db $ff,$00,$f7,$00  ; row 3: handle opening
+.db $ff,$00,$e0,$00  ; row 4: flap
+.db $ff,$00,$e0,$00  ; row 5: body
+.db $ff,$00,$c7,$00  ; row 6: pocket outline
+.db $ff,$00,$c7,$00  ; row 7: pocket
 IconInvTR:
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$3F,$00    ; handle
-.db $FF,$00,$DF,$00    ; opening
-.db $FF,$00,$0F,$00    ; flap
-.db $FF,$00,$0F,$00    ; body
-.db $FF,$00,$C7,$00    ; pocket
-.db $FF,$00,$C7,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$3f,$00  ; handle
+.db $ff,$00,$df,$00  ; opening
+.db $ff,$00,$0f,$00  ; flap
+.db $ff,$00,$0f,$00  ; body
+.db $ff,$00,$c7,$00  ; pocket
+.db $ff,$00,$c7,$00
 IconInvBL:
-.db $FF,$00,$C0,$00    ; row 8: divider
-.db $FF,$00,$C0,$00    ; row 9: body
-.db $FF,$00,$C0,$00    ; row 10: body
-.db $FF,$00,$E0,$00    ; row 11: bottom
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
+.db $ff,$00,$c0,$00  ; row 8: divider
+.db $ff,$00,$c0,$00  ; row 9: body
+.db $ff,$00,$c0,$00  ; row 10: body
+.db $ff,$00,$e0,$00  ; row 11: bottom
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 IconInvBR:
-.db $FF,$00,$07,$00    ; divider
-.db $FF,$00,$07,$00    ; body
-.db $FF,$00,$07,$00    ; body
-.db $FF,$00,$0F,$00    ; bottom
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
+.db $ff,$00,$07,$00  ; divider
+.db $ff,$00,$07,$00  ; body
+.db $ff,$00,$07,$00  ; body
+.db $ff,$00,$0f,$00  ; bottom
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 
 ; --- Pickup (arrow up from box) icon ---
 IconPickTL:
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FC,$00    ; arrow tip
-.db $FF,$00,$F8,$00    ; arrow
-.db $FF,$00,$F0,$00    ; arrow head
-.db $FF,$00,$FC,$00    ; shaft
-.db $FF,$00,$FC,$00
-.db $FF,$00,$FC,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$fc,$00  ; arrow tip
+.db $ff,$00,$f8,$00  ; arrow
+.db $ff,$00,$f0,$00  ; arrow head
+.db $ff,$00,$fc,$00  ; shaft
+.db $ff,$00,$fc,$00
+.db $ff,$00,$fc,$00
 IconPickTR:
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$3F,$00    ; arrow tip
-.db $FF,$00,$1F,$00    ; arrow
-.db $FF,$00,$0F,$00    ; arrow head
-.db $FF,$00,$3F,$00    ; shaft
-.db $FF,$00,$3F,$00
-.db $FF,$00,$3F,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$3f,$00  ; arrow tip
+.db $ff,$00,$1f,$00  ; arrow
+.db $ff,$00,$0f,$00  ; arrow head
+.db $ff,$00,$3f,$00  ; shaft
+.db $ff,$00,$3f,$00
+.db $ff,$00,$3f,$00
 IconPickBL:
-.db $FF,$00,$E0,$00    ; box top
-.db $FF,$00,$E7,$00    ; box side
-.db $FF,$00,$E7,$00    ; box side
-.db $FF,$00,$E0,$00    ; box bottom
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
+.db $ff,$00,$e0,$00  ; box top
+.db $ff,$00,$e7,$00  ; box side
+.db $ff,$00,$e7,$00  ; box side
+.db $ff,$00,$e0,$00  ; box bottom
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 IconPickBR:
-.db $FF,$00,$07,$00    ; box top
-.db $FF,$00,$E7,$00    ; box side
-.db $FF,$00,$E7,$00    ; box side
-.db $FF,$00,$07,$00    ; box bottom
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
+.db $ff,$00,$07,$00  ; box top
+.db $ff,$00,$e7,$00  ; box side
+.db $ff,$00,$e7,$00  ; box side
+.db $ff,$00,$07,$00  ; box bottom
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 
 ; --- Wait (hourglass) icon ---
 IconWaitTL:
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$E0,$00    ; top bar
-.db $FF,$00,$F0,$00    ; narrowing
-.db $FF,$00,$F8,$00
-.db $FF,$00,$FC,$00
-.db $FF,$00,$FE,$00    ; neck
-.db $FF,$00,$FE,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$e0,$00  ; top bar
+.db $ff,$00,$f0,$00  ; narrowing
+.db $ff,$00,$f8,$00
+.db $ff,$00,$fc,$00
+.db $ff,$00,$fe,$00  ; neck
+.db $ff,$00,$fe,$00
 IconWaitTR:
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$0F,$00    ; top bar
-.db $FF,$00,$1F,$00    ; narrowing
-.db $FF,$00,$3F,$00
-.db $FF,$00,$3F,$00
-.db $FF,$00,$7F,$00    ; neck
-.db $FF,$00,$7F,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$0f,$00  ; top bar
+.db $ff,$00,$1f,$00  ; narrowing
+.db $ff,$00,$3f,$00
+.db $ff,$00,$3f,$00
+.db $ff,$00,$7f,$00  ; neck
+.db $ff,$00,$7f,$00
 IconWaitBL:
-.db $FF,$00,$FC,$00    ; widening
-.db $FF,$00,$F8,$00
-.db $FF,$00,$F0,$00
-.db $FF,$00,$E0,$00    ; bottom bar
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
+.db $ff,$00,$fc,$00  ; widening
+.db $ff,$00,$f8,$00
+.db $ff,$00,$f0,$00
+.db $ff,$00,$e0,$00  ; bottom bar
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 IconWaitBR:
-.db $FF,$00,$3F,$00    ; widening
-.db $FF,$00,$1F,$00
-.db $FF,$00,$0F,$00
-.db $FF,$00,$07,$00    ; bottom bar
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
+.db $ff,$00,$3f,$00  ; widening
+.db $ff,$00,$1f,$00
+.db $ff,$00,$0f,$00
+.db $ff,$00,$07,$00  ; bottom bar
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 
 ; --- Cancel X icon ---
 IconXTL:
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$CF,$00    ; diagonal
-.db $FF,$00,$E7,$00
-.db $FF,$00,$F3,$00
-.db $FF,$00,$F9,$00
-.db $FF,$00,$FC,$00    ; center
-.db $FF,$00,$FC,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$cf,$00  ; diagonal
+.db $ff,$00,$e7,$00
+.db $ff,$00,$f3,$00
+.db $ff,$00,$f9,$00
+.db $ff,$00,$fc,$00  ; center
+.db $ff,$00,$fc,$00
 IconXTR:
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$F3,$00    ; diagonal
-.db $FF,$00,$E7,$00
-.db $FF,$00,$CF,$00
-.db $FF,$00,$9F,$00
-.db $FF,$00,$3F,$00    ; center
-.db $FF,$00,$3F,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$f3,$00  ; diagonal
+.db $ff,$00,$e7,$00
+.db $ff,$00,$cf,$00
+.db $ff,$00,$9f,$00
+.db $ff,$00,$3f,$00  ; center
+.db $ff,$00,$3f,$00
 IconXBL:
-.db $FF,$00,$F9,$00    ; diagonal
-.db $FF,$00,$F3,$00
-.db $FF,$00,$E7,$00
-.db $FF,$00,$CF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
+.db $ff,$00,$f9,$00  ; diagonal
+.db $ff,$00,$f3,$00
+.db $ff,$00,$e7,$00
+.db $ff,$00,$cf,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 IconXBR:
-.db $FF,$00,$9F,$00    ; diagonal
-.db $FF,$00,$CF,$00
-.db $FF,$00,$E7,$00
-.db $FF,$00,$F3,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
-.db $FF,$00,$FF,$00
+.db $ff,$00,$9f,$00  ; diagonal
+.db $ff,$00,$cf,$00
+.db $ff,$00,$e7,$00
+.db $ff,$00,$f3,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
+.db $ff,$00,$ff,$00
 
 ; Solid black tile using color 5 (non-zero, so priority bit works)
 .define BG_SOLID_BLACK 130

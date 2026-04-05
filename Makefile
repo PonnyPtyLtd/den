@@ -48,12 +48,12 @@ run: $(OUTPUT_ROM)
 	@echo "Running ROM in Mednafen..."
 	mednafen $(OUTPUT_ROM)
 
-# Export tiles to BMP (combined BG + sprites, plus font)
+# Export tiles to BMPs (BG + sprites separate for palette editing)
 tiles-export:
-	ruby tools/tile_export.rb tiles_export.bmp font.bmp
+	ruby tools/tile_export.rb bg_tiles.bmp sprites.bmp font.bmp
 
-# Import edited tiles back from BMP
+# Import edited tiles back from BMPs
 tiles-import:
-	ruby tools/tile_import.rb tiles_export.bmp font.bmp
+	ruby tools/tile_import.rb bg_tiles.bmp sprites.bmp font.bmp
 
 .PHONY: all clean run tiles-export tiles-import
