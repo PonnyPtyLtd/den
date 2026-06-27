@@ -527,6 +527,9 @@ _aei_armor:
     jr _aei_clearPocket
 
 _aei_helmet:
+    ld a,(PlayerRace)
+    cp 3
+    ret z                   ; chickens can't wear helmets (the crest!)
     ld a,(InvHead)
     or a
     ret nz
@@ -981,6 +984,9 @@ EquipSelected:
     jr _es_recalc
 
 _es_toHead:
+    ld a,(PlayerRace)
+    cp 3
+    ret z                   ; chickens can't wear helmets (the crest!)
     ld a,(InvHead)
     ld c,a
     ld a,b

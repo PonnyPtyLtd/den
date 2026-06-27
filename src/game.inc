@@ -98,10 +98,10 @@ GiveRaceDefaults:
 ; Starting loadout per race, one 6-byte row each:
 ;   LeftHand, RightHand, Body, Head, Pocket1, Pocket2
 RaceDefaultEquip:
-    .db ITEM_WEAPON_1, 0,            0,           0,          ITEM_POTION, ITEM_POTION  ; 0 Poison Arrow Frog
-    .db ITEM_WEAPON_2, 0,            0,           0,          0,           0            ; 1 Dingo
+    .db ITEM_WEAPON_1, 0,            0,           0,          ITEM_POTION, 0            ; 0 Poison Arrow Frog
+    .db ITEM_WEAPON_1, 0,            0,           0,          0,           0            ; 1 Dingo
     .db ITEM_WEAPON_1, ITEM_SHIELD_1, ITEM_ARMOR_1, 0,         0,           0            ; 2 Manul
-    .db ITEM_WEAPON_1, 0,            0,           ITEM_HELMET, ITEM_POTION, 0            ; 3 Polish Chicken
+    .db ITEM_WEAPON_1, 0,            0,           0,          ITEM_POTION, 0            ; 3 Polish Chicken
 
 ;--------------------------------------------------------------
 GenerateLevel:
