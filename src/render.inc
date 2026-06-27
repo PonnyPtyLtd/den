@@ -460,43 +460,39 @@ _rfm_done:
 ; RenderHUD - status bar on hw rows 22-23
 ;--------------------------------------------------------------
 RenderHUD:
+    ; NOTE: deliberately does not clear the panel. Every display-off caller
+    ; runs ClearNameTable first, and the only display-on caller (_pt_alive)
+    ; only refreshes fixed-width fields, so no clear is needed. Keeping the
+    ; write count small avoids VRAM glitches when called mid-frame.
     di
-    ; Clear HUD row first (32 tiles × 2 bytes = 64 bytes of zeros)
-    ld a,$80
-    out ($bf),a
-    ld a,$3D | $40
-    out ($bf),a
-    ld b,64
-_hud_clear:
-    xor a
-    out ($be),a
-    djnz _hud_clear
-    ; Now write hearts starting at row 22 col 0
-    ld a,$80
-    out ($bf),a
-    ld a,$3D | $40
-    out ($bf),a
-    ; Hearts: each heart = 4 HP, shown in 1/4 increments
-    ; Draw ceil(MaxHP/4) hearts
+    ; --- "HP" label (25,0) ---
+    ld b,25
+    ld c,0
+    call _wt16_addr
+    ld hl,_hudHpLbl
+    call _hudPutStr
+
+    ; --- Hearts (25,1): ceil(MaxHP/4) hearts, 1/4 increments ---
+    ld b,25
+    ld c,1
+    call _wt16_addr
     ld a,(PlayerMaxHP)
     add a,3
     rrca
     rrca
-    and $3F                 ; ceil(MaxHP/4) = (MaxHP+3)/4
-    ld b,a                  ; B = total hearts to draw
+    and $3F                 ; ceil(MaxHP/4)
+    ld b,a                  ; B = total hearts
     ld a,(PlayerHP)
     ld c,a                  ; C = remaining HP
 _hud_heartLoop:
     ld a,b
     or a
     jr z,_hud_heartsDone
-    ; Determine fill for this heart: min(C, 4)
     ld a,c
     cp 5
     jr c,+
     ld a,4                  ; cap at 4
-+:  ; A = quarter-fill (0-4), look up tile
-    push bc
++:  push bc
     ld hl,HeartTileTable
     ld c,a
     ld b,0
@@ -506,7 +502,6 @@ _hud_heartLoop:
     xor a
     out ($be),a             ; attr
     pop bc
-    ; Subtract 4 from remaining HP (saturate at 0)
     ld a,c
     sub 4
     jr nc,+
@@ -515,23 +510,67 @@ _hud_heartLoop:
     dec b
     jr _hud_heartLoop
 _hud_heartsDone:
-    ; Space
-    xor a
-    out ($be),a
-    out ($be),a
-    ; "F:" and floor number
-    ld a,'F'-$20
-    out ($be),a
-    xor a
-    out ($be),a
-    ld a,':'-$20
-    out ($be),a
-    xor a
-    out ($be),a
+
+    ; --- Floor (25,3) ---
+    ld b,25
+    ld c,3
+    call _wt16_addr
+    ld hl,_hudFlrLbl
+    call _hudPutStr
     ld a,(DungeonLevel)
-    call WriteNumber1
+    call _hudNum
+
+    ; --- ATK (25,5) ---
+    ld b,25
+    ld c,5
+    call _wt16_addr
+    ld hl,_hudAtkLbl
+    call _hudPutStr
+    ld a,(PlayerAtk)
+    call _hudNum
+
+    ; --- DEF (25,6) ---
+    ld b,25
+    ld c,6
+    call _wt16_addr
+    ld hl,_hudDefLbl
+    call _hudPutStr
+    ld a,(PlayerDef)
+    call _hudNum
+
+    ; --- "GEAR" label (25,8); equipped icons drawn as sprites ---
+    ld b,25
+    ld c,8
+    call _wt16_addr
+    ld hl,_hudGearLbl
+    call _hudPutStr
+
     ei
     ret
+
+; Write null-terminated string at current VDP write addr (caller holds di)
+_hudPutStr:
+    ld a,(hl)
+    or a
+    ret z
+    sub $20
+    out ($be),a
+    xor a
+    out ($be),a
+    inc hl
+    jr _hudPutStr
+
+; Write A (0-99) as decimal with no leading zero, at current VDP addr
+_hudNum:
+    cp 10
+    jp c,WriteNumber1
+    jp WriteNumber2
+
+_hudHpLbl:   .db "HP",0
+_hudFlrLbl:  .db "FLR ",0
+_hudAtkLbl:  .db "ATK ",0
+_hudDefLbl:  .db "DEF ",0
+_hudGearLbl: .db "GEAR",0
 
 WriteNumber2:
     ld b,0
@@ -737,9 +776,49 @@ _bst2_inext:
     jr _bst2_ix
 _bst2_iny:
     inc d
+    ld a,16-MAP_WIDTH       ; skip unused stride columns (buffer stride is 16)
+    add a,l
+    ld l,a
+    jr nc,+
+    inc h
++:
     jr _bst2_iy
 _bst2_idone:
+    call DrawGearIcons
     ret
+
+; DrawGearIcons - equipped gear icons in the side panel (2x2 grid).
+; Shared by BuildSpriteTable and BuildEnemySpriteAnim so the icons stay
+; present in the SAT every frame (otherwise they flicker during animation).
+DrawGearIcons:
+    ld a,(InvLeftHand)      ; weapon
+    ld d,200
+    ld e,72
+    call _bst_gear
+    ld a,(InvRightHand)     ; shield
+    ld d,224
+    ld e,72
+    call _bst_gear
+    ld a,(InvBody)          ; armor
+    ld d,200
+    ld e,96
+    call _bst_gear
+    ld a,(InvHead)          ; helmet
+    ld d,224
+    ld e,96
+    call _bst_gear
+    ret
+
+; Add an equipped item's icon sprite. A=item type (0=empty), D=pixelX, E=pixelY
+_bst_gear:
+    or a
+    ret z
+    ld hl,ItemSprBaseTable
+    ld c,a
+    ld b,0
+    add hl,bc
+    ld c,(hl)               ; sprite tile base
+    jp AddSprite16Simple
 
 ; Helper: Add a 16x16 sprite (2 actual sprites in 8x16 mode)
 ; D=pixelX, E=pixelY, C=sprite_tile_base

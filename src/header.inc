@@ -1,9 +1,9 @@
 ;==============================================================
 ; Constants
 ;==============================================================
-.define MAP_WIDTH 16
-.define MAP_HEIGHT 11
-.define MAP_SIZE 176
+.define MAP_WIDTH 12
+.define MAP_HEIGHT 12
+.define MAP_SIZE 192        ; buffer is stride-16 x 12 rows (cols 12-15 unused, act as border)
 .define MAX_ENEMIES 8
 .define ENEMY_SIZE 5
 .define ENEMY_X 0
@@ -97,7 +97,7 @@ InputNew db
 InputCurrent db
 NumRooms db
 RoomData dsb 20
-MapBuffer dsb 176
+MapBuffer dsb 192
 EnemyData dsb 40
 AnimTimer db
 AnimFrame db
@@ -145,8 +145,8 @@ BorderW db
 BorderH db
 BorderPriority db       ; nonzero = use priority bit (menu over sprites)
 ; Pathfinding
-DistMap dsb 176         ; flood-fill distance from player (176 = 16x11)
-PathQueue dsb 176       ; BFS queue (stores tile indices)
+DistMap dsb 192         ; flood-fill distance from player (stride-16 x 12 rows)
+PathQueue dsb 192       ; BFS queue (stores tile indices)
 BfsHead db
 BfsTail db
 WandAiming db           ; nonzero = waiting for direction to fire wand

@@ -631,6 +631,7 @@ _besa_skip:
     djnz _besa_loop
     ; Items (scan map - same as BuildSpriteTable)
     call _besa_items
+    call DrawGearIcons      ; keep gear icons present during animation frames
     ret
 
 _besa_items:
@@ -676,6 +677,12 @@ _besa_inext:
     jr _besa_ix
 _besa_iny:
     inc d
+    ld a,16-MAP_WIDTH       ; skip unused stride columns (buffer stride is 16)
+    add a,l
+    ld l,a
+    jr nc,+
+    inc h
++:
     jr _besa_iy
 
 ;--------------------------------------------------------------

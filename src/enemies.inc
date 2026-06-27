@@ -272,10 +272,10 @@ _uclb_done:
 ; Uses PathQueue as BFS queue (tile indices 0-175)
 ;--------------------------------------------------------------
 BuildDistMap:
-    ; Fill DistMap with $FF
+    ; Fill DistMap with $FF (full stride-16 x 12 buffer)
     ld hl,DistMap
     ld a,$FF
-    ld b,176
+    ld b,192
 _bdm_fill:
     ld (hl),a
     inc hl

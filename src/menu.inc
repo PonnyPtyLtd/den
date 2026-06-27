@@ -3,8 +3,8 @@
 ;==============================================================
 
 ;--------------------------------------------------------------
-; DrawRadialMenu - 3x3 grid of 2x2 hw tiles centered on screen
-; Center of 32x22 hw map = hw tiles (13,8) to (18,13)
+; DrawRadialMenu - 3x3 grid of 2x2 hw tiles in the right panel
+; Border at hw tiles (24,15)-(31,22); icons only (no text labels)
 ; Top=Pickup, Left=Inventory, Bottom=Wait, Center=Cancel
 ;--------------------------------------------------------------
 DrawRadialMenu:
@@ -16,32 +16,31 @@ DrawRadialMenu:
     ld a,1
     ld (BorderPriority),a   ; priority = menu renders over sprites
     ; 3x3 grid of 16x16 icons = 6x6 hw tiles + 2 for border = 8x8
-    ; Centered: hw tiles (12,7) to (19,14)
-    ld b,12
-    ld c,7
+    ; Lower-right panel: hw tiles (24,15) to (31,22)
+    ld b,24
+    ld c,15
     ld d,8
     ld e,8
     call DrawRootBorder
-    ; Cancel X icon (center, always normal)
-    ld b,15
-    ld c,10
+    ; Cancel X icon (center, always normal): (27,18)-(28,19)
+    ld b,27
+    ld c,18
     ld a,BG_ICON_X_TL
     call _drb_writeTile
-    ld b,16
-    ld c,10
+    ld b,28
+    ld c,18
     ld a,BG_ICON_X_TR
     call _drb_writeTile
-    ld b,15
-    ld c,11
+    ld b,27
+    ld c,19
     ld a,BG_ICON_X_BL
     call _drb_writeTile
-    ld b,16
-    ld c,11
+    ld b,28
+    ld c,19
     ld a,BG_ICON_X_BR
     call _drb_writeTile
     ; Draw selectable icons (with selection state)
     call DrawRadialSelection
-    call DrawRadialDesc
     ret
 
 ;--------------------------------------------------------------
@@ -49,55 +48,55 @@ DrawRadialMenu:
 ; overdraw the selected one with its highlighted (border) variant
 ;--------------------------------------------------------------
 DrawRadialSelection:
-    ; --- Pickup at top center: (15,8)-(16,9) ---
-    ld b,15
-    ld c,8
+    ; --- Pickup at top center: (27,16)-(28,17) ---
+    ld b,27
+    ld c,16
     ld a,BG_ICON_PICK_TL
     call _drb_writeTile
-    ld b,16
-    ld c,8
+    ld b,28
+    ld c,16
     ld a,BG_ICON_PICK_TR
     call _drb_writeTile
-    ld b,15
-    ld c,9
+    ld b,27
+    ld c,17
     ld a,BG_ICON_PICK_BL
     call _drb_writeTile
-    ld b,16
-    ld c,9
+    ld b,28
+    ld c,17
     ld a,BG_ICON_PICK_BR
     call _drb_writeTile
-    ; --- Inventory at middle left: (13,10)-(14,11) ---
-    ld b,13
-    ld c,10
+    ; --- Inventory at middle left: (25,18)-(26,19) ---
+    ld b,25
+    ld c,18
     ld a,BG_ICON_INV_TL
     call _drb_writeTile
-    ld b,14
-    ld c,10
+    ld b,26
+    ld c,18
     ld a,BG_ICON_INV_TR
     call _drb_writeTile
-    ld b,13
-    ld c,11
+    ld b,25
+    ld c,19
     ld a,BG_ICON_INV_BL
     call _drb_writeTile
-    ld b,14
-    ld c,11
+    ld b,26
+    ld c,19
     ld a,BG_ICON_INV_BR
     call _drb_writeTile
-    ; --- Wait at bottom center: (15,12)-(16,13) ---
-    ld b,15
-    ld c,12
+    ; --- Wait at bottom center: (27,20)-(28,21) ---
+    ld b,27
+    ld c,20
     ld a,BG_ICON_WAIT_TL
     call _drb_writeTile
-    ld b,16
-    ld c,12
+    ld b,28
+    ld c,20
     ld a,BG_ICON_WAIT_TR
     call _drb_writeTile
-    ld b,15
-    ld c,13
+    ld b,27
+    ld c,21
     ld a,BG_ICON_WAIT_BL
     call _drb_writeTile
-    ld b,16
-    ld c,13
+    ld b,28
+    ld c,21
     ld a,BG_ICON_WAIT_BR
     call _drb_writeTile
     ; --- Overdraw selected icon with border variant ---
@@ -110,106 +109,59 @@ DrawRadialSelection:
     jr z,_drs_wait
     ret
 _drs_pickup:
-    ld b,15
-    ld c,8
+    ld b,27
+    ld c,16
     ld a,BG_ICON_PICK_SEL_TL
     call _drb_writeTile
-    ld b,16
-    ld c,8
+    ld b,28
+    ld c,16
     ld a,BG_ICON_PICK_SEL_TR
     call _drb_writeTile
-    ld b,15
-    ld c,9
+    ld b,27
+    ld c,17
     ld a,BG_ICON_PICK_SEL_BL
     call _drb_writeTile
-    ld b,16
-    ld c,9
+    ld b,28
+    ld c,17
     ld a,BG_ICON_PICK_SEL_BR
     call _drb_writeTile
     ret
 _drs_inv:
-    ld b,13
-    ld c,10
+    ld b,25
+    ld c,18
     ld a,BG_ICON_INV_SEL_TL
     call _drb_writeTile
-    ld b,14
-    ld c,10
+    ld b,26
+    ld c,18
     ld a,BG_ICON_INV_SEL_TR
     call _drb_writeTile
-    ld b,13
-    ld c,11
+    ld b,25
+    ld c,19
     ld a,BG_ICON_INV_SEL_BL
     call _drb_writeTile
-    ld b,14
-    ld c,11
+    ld b,26
+    ld c,19
     ld a,BG_ICON_INV_SEL_BR
     call _drb_writeTile
     ret
 _drs_wait:
-    ld b,15
-    ld c,12
+    ld b,27
+    ld c,20
     ld a,BG_ICON_WAIT_SEL_TL
     call _drb_writeTile
-    ld b,16
-    ld c,12
+    ld b,28
+    ld c,20
     ld a,BG_ICON_WAIT_SEL_TR
     call _drb_writeTile
-    ld b,15
-    ld c,13
+    ld b,27
+    ld c,21
     ld a,BG_ICON_WAIT_SEL_BL
     call _drb_writeTile
-    ld b,16
-    ld c,13
+    ld b,28
+    ld c,21
     ld a,BG_ICON_WAIT_SEL_BR
     call _drb_writeTile
     ret
-
-DrawRadialDesc:
-    ; Clear description area below border (row 16)
-    ld b,10
-    ld c,16
-    ld hl,_rmBlankDesc
-    call PrintString
-    ; Show what's selected
-    ld a,(MenuCursor)
-    or a
-    jr z,_rdd_none
-    cp 1
-    jr z,_rdd_pick
-    cp 2
-    jr z,_rdd_inv
-    cp 3
-    jr z,_rdd_wait
-_rdd_none:
-    ld b,10
-    ld c,16
-    ld hl,_rmDesc0
-    call PrintString
-    ret
-_rdd_pick:
-    ld b,13
-    ld c,16
-    ld hl,_rmDesc2
-    call PrintString
-    ret
-_rdd_inv:
-    ld b,12
-    ld c,16
-    ld hl,_rmDesc1
-    call PrintString
-    ret
-_rdd_wait:
-    ld b,13
-    ld c,16
-    ld hl,_rmDesc3
-    call PrintString
-    ret
-
-_rmBlankDesc: .db "                ",0
-_rmDesc0: .db "Pick direction",0
-_rmDesc1: .db "Inventory",0
-_rmDesc2: .db "Pick up",0
-_rmDesc3: .db "Skip turn",0
 
 ;--------------------------------------------------------------
 ; RadialMenuTick
@@ -224,7 +176,6 @@ RadialMenuTick:
     ld (MenuCursor),a
     call PlayMenuSfx
     call DrawRadialSelection
-    call DrawRadialDesc
 +:
     ld a,(InputNew)
     bit 2,a                 ; LEFT = Inventory
@@ -233,7 +184,6 @@ RadialMenuTick:
     ld (MenuCursor),a
     call PlayMenuSfx
     call DrawRadialSelection
-    call DrawRadialDesc
 +:
     ld a,(InputNew)
     bit 1,a                 ; DOWN = Wait
@@ -242,7 +192,6 @@ RadialMenuTick:
     ld (MenuCursor),a
     call PlayMenuSfx
     call DrawRadialSelection
-    call DrawRadialDesc
 +:
     ; B1 confirms, B2 also confirms or closes
     ld a,(InputNew)
