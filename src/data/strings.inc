@@ -63,12 +63,6 @@ ChickenRaceName:.db "Polish Chicken",0
 PickRaceStr:    .db "Choose your hero!",0
 RaceConfirmStr: .db "Start:Go  U/D:Change",0
 
-; Drafting
-DraftTitleStr:  .db "Choose an item!",0
-DraftHelpStr:   .db "L/R:Pick  Start:Take",0
-DraftRoundStr:  .db "Pick",0
-DraftOfStr:     .db "of",0
-
 ; Race name pointer table
 RaceNameTable:
 .dw FrogRaceName

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sega Master System roguelike written in Z80 assembly using the WLA-DX assembler. Single 32KB ROM bank. Turn-based dungeon crawler with 5 floors, 4 playable races, item drafting, and lunge-based attack animations.
+Sega Master System roguelike written in Z80 assembly using the WLA-DX assembler. Single 32KB ROM bank. Turn-based dungeon crawler with 5 floors, 4 playable races (each with a fixed starting loadout), and lunge-based attack animations.
 
 ## Build Commands
 
@@ -31,7 +31,7 @@ Single entry point `src/main.asm` includes all other files via `.include`. The g
 
 ### Game State Machine
 
-GameState values: 0=title, 1=play, 2=dead, 3=win, 4=raceSelect, 5=draft. Turn phases during play: IDLE(0) → PLAYER_ANIM(1) → ENEMY_ANIM(2), with attack sub-phases PLAYER_ATK_FWD(3) and PLAYER_ATK_BACK(4) for the lunge animation.
+GameState values: 0=title, 1=play, 2=dead, 3=win, 4=raceSelect. Turn phases during play: IDLE(0) → PLAYER_ANIM(1) → ENEMY_ANIM(2), with attack sub-phases PLAYER_ATK_FWD(3) and PLAYER_ATK_BACK(4) for the lunge animation.
 
 ### Entity Data
 

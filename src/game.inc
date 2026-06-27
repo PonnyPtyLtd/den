@@ -27,8 +27,6 @@ GameTick:
     jp z,WinTick
     cp 4
     jp z,RaceSelectTick
-    cp 5
-    jp z,DraftTick
     ret
 
 ;--------------------------------------------------------------
@@ -72,8 +70,38 @@ StartNewGame:
     ld (WandAiming),a
     ld a,15
     ld (AnimTimer),a
+    call GiveRaceDefaults   ; per-race starting equipment + RecalcStats
     call GenerateLevel
     ret
+
+;--------------------------------------------------------------
+; GiveRaceDefaults - copy the selected race's starting loadout into the
+; 6 contiguous inventory slots (LeftHand,RightHand,Body,Head,Pocket1,Pocket2)
+; then recompute ATK/DEF from the equipped gear.
+;--------------------------------------------------------------
+GiveRaceDefaults:
+    ld a,(PlayerRace)
+    ld l,a
+    add a,a                 ; *2
+    add a,l                 ; *3
+    add a,a                 ; *6 (6 bytes per race)
+    ld c,a
+    ld b,0
+    ld hl,RaceDefaultEquip
+    add hl,bc               ; HL = source row
+    ld de,InvLeftHand       ; DE = dest (6 contiguous slots)
+    ld bc,6
+    ldir
+    call RecalcStats
+    ret
+
+; Starting loadout per race, one 6-byte row each:
+;   LeftHand, RightHand, Body, Head, Pocket1, Pocket2
+RaceDefaultEquip:
+    .db ITEM_WEAPON_1, 0,            0,           0,          ITEM_POTION, ITEM_POTION  ; 0 Poison Arrow Frog
+    .db ITEM_WEAPON_2, 0,            0,           0,          0,           0            ; 1 Dingo
+    .db ITEM_WEAPON_1, ITEM_SHIELD_1, ITEM_ARMOR_1, 0,         0,           0            ; 2 Manul
+    .db ITEM_WEAPON_1, 0,            0,           ITEM_HELMET, ITEM_POTION, 0            ; 3 Polish Chicken
 
 ;--------------------------------------------------------------
 GenerateLevel:
@@ -921,9 +949,7 @@ RaceSelectTick:
     ret z
     call PlayMenuSfx
     call LoadRaceSprites
-    call StartNewGame
-    ; Go to item draft
-    call StartDraft
+    call StartNewGame       ; equips race defaults and starts play directly
     ret
 
 ;--------------------------------------------------------------
@@ -979,291 +1005,6 @@ _lrs_f2:
     inc hl
     djnz _lrs_f2
     ei
-    ret
-
-;--------------------------------------------------------------
-; Item Drafting System
-; 3 independent rounds, each with its own pool from a previous player:
-; Round 0: pick 1 of 4 (or previous player's leftover 3)
-; Round 1: pick 1 of 3 (or previous player's leftover 2)
-; Round 2: pick 1 of 2 (or previous player's leftover 1)
-;--------------------------------------------------------------
-StartDraft:
-    xor a
-    ld (DraftRound),a
-    ld (DraftCursor),a
-    call LoadRoundPool      ; load/generate pool for round 0
-    call ShowDraftScreen
-    ld a,5
-    ld (GameState),a
-    ret
-
-; Load or generate the pool for the current DraftRound
-LoadRoundPool:
-    xor a
-    ld (DraftCursor),a
-    ld a,(DraftRound)
-
-    ; Round 0: ALWAYS fresh (4 weapons)
-    or a
-    jr z,_lrp_round0
-
-    ; Rounds 1-2: try loading from SRAM (previous player's leftovers)
-    call LoadDraftFromSRAM
-    ret c                   ; loaded from previous player
-
-    ; No save - generate fresh items as fallback
-    ld a,(DraftRound)
-    cp 1
-    jr z,_lrp_round1
-    ; Round 2: generate 2 random items
-    ld a,2
-    jr _lrp_genRandom
-
-_lrp_round0:
-    ; Always generate 4 tier-1 items
-    ld a,4
-    ld (DraftPoolSize),a
-    ld a,4
-    jr _lrp_genRandom
-
-_lrp_round1:
-    ; Generate 3 random tier-1 equipment
-    ld a,3
-_lrp_genRandom:
-    ld (DraftPoolSize),a
-    ld b,a
-    ld hl,DraftPool
-_lrp_genLoop:
-    push bc
-    push hl
-    ; Pick from tier 1 only: 1=stick, 4=wood shield, 7=reed armor, 10=helmet
-    ld a,4
-    call GetRandomRange     ; 0-3
-    ld c,a
-    ld b,0
-    push hl
-    ld hl,_lrp_tier1Table
-    add hl,bc
-    ld a,(hl)
-    pop hl
-    pop hl
-    ld (hl),a
-    inc hl
-    pop bc
-    djnz _lrp_genLoop
-    ret
-
-_lrp_tier1Table: .db 1, 4, 7, 10  ; stick, wood shield, reed armor, helmet
-
-ShowDraftScreen:
-    call DisplayOff
-    call ClearNameTable
-    ; Draw root border
-    xor a
-    ld (BorderPriority),a
-    ld b,2
-    ld c,0
-    ld d,28
-    ld e,20
-    call DrawRootBorder
-    xor a
-    ld (NumSprites),a
-    ; Title
-    ld b,7
-    ld c,2
-    ld hl,DraftTitleStr
-    call PrintString
-    ; Show items in pool with sprites
-    ld a,(DraftPoolSize)
-    ld b,a
-    ld c,0                  ; item index
-_sds_loop:
-    push bc
-    ; Get item type from pool
-    ld hl,DraftPool
-    ld b,0
-    add hl,bc
-    ld a,(hl)               ; item type
-    push af
-    ; Print name at column 7, row = 5 + index*2
-    ld a,c
-    add a,a
-    add a,5
-    ld c,a
-    ld b,7
-    pop af
-    push af
-    push bc                 ; save position
-    ; Look up item name
-    add a,a
-    ld c,a
-    ld b,0
-    ld hl,ItemNameTable
-    add hl,bc
-    ld a,(hl)
-    inc hl
-    ld h,(hl)
-    ld l,a
-    pop bc                  ; restore B=col, C=row
-    push bc
-    call PrintString
-    pop bc
-    ; Show item sprite inside border at (pixel X=28, row*8)
-    pop af                  ; A = item type
-    push bc
-    ld hl,ItemSprBaseTable
-    ld c,a
-    ld b,0
-    add hl,bc
-    ld c,(hl)               ; sprite base
-    pop de                  ; D=col(unused), E=row
-    ld a,e
-    add a,a
-    add a,a
-    add a,a                 ; row * 8 = pixel Y
-    ld e,a
-    ld d,28                 ; pixel X inside border
-    call AddSprite16Simple
-    pop bc
-    inc c
-    djnz _sds_loop
-    ; Draw cursor
-    call DrawDraftCursor
-    call DisplayOn
-    ret
-
-DrawDraftCursor:
-    ; Clear old cursors at column 5, rows 5,7,9,11
-    ld e,4                  ; counter (DON'T use B - _writeChar8 needs it)
-    ld c,5                  ; starting row
-_ddc_clr:
-    push de
-    push bc
-    ld b,5                  ; column 5
-    ld a,' '
-    call _writeChar8
-    pop bc
-    pop de
-    inc c
-    inc c
-    dec e
-    jr nz,_ddc_clr
-    ; Draw > at selected item (row = 5 + cursor*2)
-    ld a,(DraftCursor)
-    add a,a
-    add a,5
-    ld c,a
-    ld b,5
-    ld a,'>'
-    call _writeChar8
-    ret
-
-DraftTick:
-    ld a,(InputNew)
-    or a
-    ret z
-    ; UP
-    bit 0,a
-    jr z,+
-    ld a,(DraftCursor)
-    or a
-    jr z,+
-    dec a
-    ld (DraftCursor),a
-    call PlayMenuSfx
-    call DrawDraftCursor
-    ret
-+:
-    ; DOWN
-    ld a,(InputNew)
-    bit 1,a
-    jr z,+
-    ld a,(DraftCursor)
-    ld b,a
-    ld a,(DraftPoolSize)
-    dec a
-    cp b
-    jr z,+
-    ld a,b
-    inc a
-    ld (DraftCursor),a
-    call PlayMenuSfx
-    call DrawDraftCursor
-    ret
-+:
-    ; B1 - take selected item
-    ld a,(InputNew)
-    bit 4,a
-    ret z
-    ; Get selected item from pool
-    ld a,(DraftCursor)
-    ld c,a
-    ld b,0
-    ld hl,DraftPool
-    add hl,bc
-    ld a,(hl)
-    ; Put in inventory and auto-equip
-    push hl
-    push af
-    call PickupItem         ; A = item type -> pocket
-    pop af
-    call AutoEquipItem      ; equip if slot is empty
-    pop hl
-    ; Remove from pool: shift remaining items down
-    ld a,(DraftPoolSize)
-    dec a
-    ld (DraftPoolSize),a
-    ld b,a
-    ld a,(DraftCursor)
-    sub b
-    jr nc,_dt_noShift       ; cursor at end, no shift needed
-    ; Shift items from cursor+1 onward
-    ld a,(DraftCursor)
-    ld c,a
-    ld b,0
-    ld hl,DraftPool
-    add hl,bc
-    ld d,h
-    ld e,l                  ; DE = current pos
-    inc hl                  ; HL = next pos
-    ld a,(DraftPoolSize)
-    sub c
-    ld b,a                  ; B = items to shift
-    jr z,_dt_noShift
-_dt_shift:
-    ld a,(hl)
-    ld (de),a
-    inc hl
-    inc de
-    djnz _dt_shift
-_dt_noShift:
-    ; Save this round's leftovers for next player
-    ; Round 0 leftovers → Slot A (next player's Round 1)
-    ; Round 1 leftovers → Slot B (next player's Round 2)
-    ld a,(DraftRound)
-    call SaveDraftLeftovers
-    ; Advance to next round
-    ld a,(DraftRound)
-    inc a
-    ld (DraftRound),a
-    cp 3
-    jr z,_dt_done           ; all 3 picks made
-    ; Load/generate pool for next round
-    call LoadRoundPool
-    call PlayMenuSfx
-    call ShowDraftScreen
-    ret
-_dt_done:
-    ; Drafting complete - start playing
-    ld a,1
-    ld (GameState),a
-    call DisplayOff
-    call ClearNameTable
-    call RenderFullMap
-    call RenderHUD
-    call BuildSpriteTable
-    call DisplayOn
     ret
 
 _closeAimMenu:

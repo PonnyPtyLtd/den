@@ -1,6 +1,6 @@
 # Den
 
-A Sega Master System roguelike written in Z80 assembly. Turn-based dungeon crawler with 5 floors, 4 playable races, item drafting, and lunge-based attack animations. Single 32KB ROM.
+A Sega Master System roguelike written in Z80 assembly. Turn-based dungeon crawler with 5 floors, 4 playable races (each with its own starting loadout), and lunge-based attack animations. Single 32KB ROM.
 
 ## Prerequisites
 

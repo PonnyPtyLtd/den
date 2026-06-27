@@ -138,11 +138,6 @@ EnemyDeltaY dsb 8
 ; Attack animation
 AttackTargetIdx db
 AttackDamage db
-; Item drafting
-DraftRound db
-DraftPool dsb 4
-DraftCursor db
-DraftPoolSize db
 ; Border drawing params
 BorderX db
 BorderY db
@@ -164,18 +159,6 @@ NumGreebles db
 ; Turn phases (extended)
 .define TURN_PLAYER_ATK_FWD 3
 .define TURN_PLAYER_ATK_BACK 4
-
-; SRAM save data addresses ($8000-$BFFF when enabled)
-; 2 slots: Round 0 leftovers feed next player's Round 1,
-;          Round 1 leftovers feed next player's Round 2
-.define SRAM_MAGIC      $8000
-.define SRAM_MAGIC_VAL  $A5
-; Slot A: prev player's Round 0 leftovers (3 items) → this player's Round 1
-.define SRAM_SLOTA_SZ   $8001
-.define SRAM_SLOTA      $8002   ; 3 bytes max
-; Slot B: prev player's Round 1 leftovers (2 items) → this player's Round 2
-.define SRAM_SLOTB_SZ   $8005
-.define SRAM_SLOTB      $8006   ; 2 bytes max
 
 ;==============================================================
 ; SDSC tag
